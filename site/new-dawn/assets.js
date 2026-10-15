@@ -1,5 +1,5 @@
 // New Dawn: every 3D model in the world, built in code.
-// tools/export.html saves the landmarks, cloud, butterfly and leaf as .glb files.
+// tools/export.html saves the landmarks, cloud, leaf and poppy as .glb files.
 import * as THREE from "three";
 import { mergeGeometries } from "./vendor/BufferGeometryUtils.js";
 
@@ -134,27 +134,6 @@ export function makeCloud(seed = 1) {
   return g;
 }
 
-// ---------- butterfly ----------
-export function makeButterfly(color = "#ff3fb4") {
-  const g = new THREE.Group();
-  g.name = "butterfly";
-  const s = new THREE.Shape();
-  s.moveTo(0, 0);
-  s.bezierCurveTo(0.25, 0.35, 0.55, 0.3, 0.45, 0.05);
-  s.bezierCurveTo(0.5, -0.15, 0.3, -0.35, 0, -0.05);
-  const geo = new THREE.ShapeGeometry(s, 10);
-  const mat = new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.4, emissive: color, emissiveIntensity: 0.2 });
-  const L = new THREE.Group(), R = new THREE.Group();
-  const wl = new THREE.Mesh(geo, mat), wr = new THREE.Mesh(geo, mat);
-  wr.scale.x = 1; wl.scale.x = -1;
-  L.add(wl); R.add(wr);
-  L.name = "wingL"; R.name = "wingR";
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.22, 4, 8), new THREE.MeshStandardMaterial({ color: INK }));
-  g.add(L, R, body);
-  g.scale.setScalar(0.55);
-  return { root: g, L, R };
-}
-
 // ---------- rainbow ----------
 export function makeRainbow(radius = 60, width = 7) {
   const geo = new THREE.RingGeometry(radius - width / 2, radius + width / 2, 160, 1, 0, Math.PI);
@@ -190,27 +169,43 @@ export function mulberry(a) {
 }
 
 // ---------- print style: toon shading in three flat inks ----------
-export function toonMaterial({ lit = "#ffffff", mid = "#bcd0ff", shadow = "#2c4bd0", light = new THREE.Vector3(-0.3, 0.6, 0.75), bumps = 1 } = {}) {
+// With `spectrum`, each instance carries aBand (which frequency band it belongs to, -1 for none)
+// and aAlong (0 near the sun, 1 at the far end); its band's energy swells and warms it.
+export function toonMaterial({ lit = "#ffffff", mid = "#bcd0ff", shadow = "#2c4bd0", light = new THREE.Vector3(-0.3, 0.6, 0.75), bumps = 1, spectrum = false } = {}) {
   return new THREE.ShaderMaterial({
     fog: false,
+    defines: spectrum ? { SPECTRUM: "" } : {},
     uniforms: {
       uLit: { value: new THREE.Color(lit) }, uMid: { value: new THREE.Color(mid) }, uShadow: { value: new THREE.Color(shadow) },
       uLight: { value: light.clone().normalize() }, uBumps: { value: bumps }, uAppear: { value: 1 },
+      uBands: { value: new Array(12).fill(0) }, uBass: { value: 0 },
     },
     vertexShader: `
-      varying vec3 vN; varying vec3 vW; uniform float uAppear;
+      varying vec3 vN; varying vec3 vW; varying float vGlow; uniform float uAppear;
+      #ifdef SPECTRUM
+        attribute float aBand; attribute float aAlong; uniform float uBands[12]; uniform float uBass;
+      #endif
       void main(){
+        float grow = 1.0;
+        vGlow = 0.0;
+        #ifdef SPECTRUM
+          float e = aBand < 0.0 ? uBass * 0.35 : uBands[int(aBand)];
+          // energy reaches further out along the streak the louder the band is
+          float reach = aBand < 0.0 ? 1.0 : smoothstep(e * 1.25 + 0.05, e * 1.25 - 0.25, aAlong);
+          grow = 1.0 + e * reach * 0.5;
+          vGlow = e * reach;
+        #endif
         mat4 m = modelMatrix;
         #ifdef USE_INSTANCING
           m = modelMatrix * instanceMatrix;
         #endif
         vN = normalize(mat3(m) * normal);
-        vec4 w = m * vec4(position * uAppear, 1.0);
+        vec4 w = m * vec4(position * uAppear * grow, 1.0);
         vW = w.xyz;
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: `
-      varying vec3 vN; varying vec3 vW;
+      varying vec3 vN; varying vec3 vW; varying float vGlow;
       uniform vec3 uLit, uMid, uShadow, uLight; uniform float uBumps;
       float h(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
       void main(){
@@ -218,6 +213,7 @@ export function toonMaterial({ lit = "#ffffff", mid = "#bcd0ff", shadow = "#2c4b
         d += (sin(vW.x*1.7 + vW.y*2.3) * sin(vW.y*1.9 - vW.z*1.3)) * 0.07 * uBumps;
         vec3 c = mix(uShadow, uMid, smoothstep(0.40, 0.44, d));
         c = mix(c, uLit, smoothstep(0.60, 0.64, d));
+        c = mix(c, vec3(1.0, 0.78, 0.45), clamp(vGlow, 0.0, 1.0) * 0.4 * smoothstep(0.4, 0.62, d));
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -353,4 +349,66 @@ export function makeTower() {
   door.name = "doorway";
   root.add(door);
   return { root, light, top: new THREE.Vector3(0, base + 2.6 + H + 4, 0), door };
+}
+
+// ---------- small things hidden in the world ----------
+
+// A paper delivery bag left on a doorstep, with its receipt.
+export function makeParcel() {
+  const g = new THREE.Group();
+  g.name = "parcel";
+  const kraft = new THREE.MeshLambertMaterial({ color: "#c79a5e" });
+  const bag = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.42, 0.22), kraft);
+  bag.position.y = 0.21;
+  const fold = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.12), kraft);
+  fold.position.set(0, 0.45, 0.02);
+  fold.rotation.x = -0.35;
+  const band = new THREE.Mesh(new THREE.BoxGeometry(0.345, 0.05, 0.225), new THREE.MeshLambertMaterial({ color: "#e8121c" }));
+  band.position.y = 0.3;
+  const slip = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.22), new THREE.MeshLambertMaterial({ color: "#fbf6ea", side: THREE.DoubleSide }));
+  slip.position.set(0.06, 0.2, 0.112);
+  slip.rotation.z = -0.15;
+  g.add(bag, fold, band, slip);
+  return g;
+}
+
+// A stone war dog, sitting guard. Its eyes are a separate material so they can kindle.
+export function makeDog() {
+  const g = new THREE.Group();
+  g.name = "dog";
+  const stone = toonMaterial({ lit: "#e6dcc4", mid: "#a69c88", shadow: "#3b4270", light: new THREE.Vector3(-0.5, 0.6, 0.6) });
+  const eyes = new THREE.MeshBasicMaterial({ color: "#10173a", fog: false });
+  const part = (geo, x, y, z, rx = 0, ry = 0, rz = 0, mat = stone) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.rotation.set(rx, ry, rz);
+    g.add(m);
+    return m;
+  };
+  part(new THREE.BoxGeometry(0.9, 0.55, 1.3), 0, 0.3, -0.1);                 // haunches
+  part(new THREE.BoxGeometry(0.75, 1.2, 0.6), 0, 0.95, 0.35, -0.35);         // chest, upright
+  [-0.22, 0.22].forEach((x) => part(new THREE.BoxGeometry(0.18, 0.9, 0.2), x, 0.45, 0.62)); // forelegs
+  part(new THREE.BoxGeometry(0.62, 0.55, 0.62), 0, 1.75, 0.55);              // head
+  part(new THREE.BoxGeometry(0.34, 0.28, 0.42), 0, 1.66, 0.98);              // muzzle
+  part(new THREE.BoxGeometry(0.14, 0.1, 0.08), 0, 1.78, 1.2, 0, 0, 0, eyes); // nose
+  [-0.2, 0.2].forEach((x) => part(new THREE.ConeGeometry(0.13, 0.42, 4), x, 2.16, 0.48, 0.15, Math.PI / 4)); // ears, pricked
+  [-0.15, 0.15].forEach((x) => part(new THREE.BoxGeometry(0.1, 0.08, 0.04), x, 1.86, 0.87, 0, 0, 0, eyes));  // eyes
+  part(new THREE.BoxGeometry(0.12, 0.12, 0.7), 0, 0.2, -0.85, 0.5);          // tail
+  return { root: g, eyes };
+}
+
+// One paw print, flat on the ground: a pad and four toes.
+export function pawGeometry() {
+  const parts = [];
+  const pad = new THREE.CircleGeometry(0.075, 14);
+  pad.scale(1.1, 0.9, 1);
+  parts.push(pad);
+  [[-0.08, 0.08], [-0.03, 0.12], [0.03, 0.12], [0.08, 0.08]].forEach(([x, y]) => {
+    const t = new THREE.CircleGeometry(0.03, 10);
+    t.translate(x, y, 0);
+    parts.push(t);
+  });
+  const g = mergeGeometries(parts);
+  g.rotateX(-Math.PI / 2);
+  return g;
 }

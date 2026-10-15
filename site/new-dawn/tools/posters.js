@@ -17,7 +17,7 @@ const SHOTS = [
     await p.addStyleTag({ content: "#gate,#compass{display:none!important}" });
     await p.evaluate((v) => window.NEW_DAWN.setLife(v), s.life);
     await p.waitForTimeout(7000);
-    await p.screenshot({ path: path.join(__dirname, "..", "imagery", s.name + ".png") });
+    await p.screenshot({ path: path.join(__dirname, "..", "imagery", s.name + ".png"), timeout: 180000 });
     console.log(s.name);
     await p.close();
   }

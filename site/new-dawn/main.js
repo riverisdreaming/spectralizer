@@ -1,15 +1,15 @@
 import * as THREE from "three";
 import {
   RAINBOW, wildflowerGeometry, bladeGeometry, leafGeometry,
-  glowTexture, makeCloud, makeButterfly, makeRainbow, mulberry,
-  toonMaterial, printSunTextures, makeGate, makeTower,
+  glowTexture, makeCloud, makeRainbow, mulberry,
+  toonMaterial, printSunTextures, makeGate, makeTower, makeParcel, makeDog, pawGeometry,
 } from "./assets.js";
 
 // Each song lives in a place on the road: the gate over the path, and the tower on the far hill.
-// Nothing names them. The compass needle points at a place, and that place sings.
+// Nothing names them. Pick a place (in the world or in the strip below) and that place sings.
 const TRACKS = [
-  { title: "doordash", src: "music/doordash.mp3", walkTo: -1.5 },
-  { title: "wardoggin", src: "music/wardoggin.mp3", walkTo: -7 },
+  { title: "doordash", src: "music/doordash.mp3", walkTo: -17 }, // by the end you have walked through the gate
+  { title: "wardoggin", src: "music/wardoggin.mp3", walkTo: -10 },
 ];
 const POPPY = ["#e8121c", "#ff2a1a", "#d40f2a", "#ffffff", "#ffd400"];
 
@@ -35,12 +35,12 @@ const post = new THREE.Mesh(
     uniforms: {
       tColor: { value: rt.texture }, tDepth: { value: rt.depthTexture },
       uRes: { value: new THREE.Vector2(rt.width, rt.height) }, uDpr: { value: dprNow() },
-      uNear: { value: 0.1 }, uFar: { value: 400 }, uLife: { value: 0 },
+      uNear: { value: 0.1 }, uFar: { value: 400 }, uLife: { value: 0 }, uKick: { value: 0 },
     },
     vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
     fragmentShader: `
       varying vec2 vUv;
-      uniform sampler2D tColor, tDepth; uniform vec2 uRes; uniform float uDpr, uNear, uFar, uLife;
+      uniform sampler2D tColor, tDepth; uniform vec2 uRes; uniform float uDpr, uNear, uFar, uLife, uKick;
       float lin(float d){ float z = d*2.0 - 1.0; return 2.0*uNear*uFar / (uFar + uNear - z*(uFar - uNear)); }
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main(){
@@ -67,6 +67,8 @@ const post = new THREE.Mesh(
         float hatch = step(0.55, fract((gl_FragCoord.x + gl_FragCoord.y) / (3.0 * max(1.0, uDpr))));
         c *= 1.0 - hatch * smoothstep(0.2, 0.06, l) * 0.35;
         c = mix(c, vec3(0.03, 0.05, 0.17), ink * 0.85);
+        // a kick lifts the whole print a touch toward warm light
+        c = mix(c, c * 1.1 + vec3(0.05, 0.03, 0.0), uKick * 0.6);
         gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
       }`,
   })
@@ -149,7 +151,7 @@ for (let i = 0; i < 14; i++) {
 
 // After the storm: towering cumulus, and streaks of cloud fanning out from the sun.
 const SUN_HOME = new THREE.Vector3(-6, 17, -140);
-const puffMat = toonMaterial({ lit: "#ffffff", mid: "#c7d6ff", shadow: "#3553d6", light: new THREE.Vector3(0.1, 0.35, 1) });
+const puffMat = toonMaterial({ lit: "#ffffff", mid: "#c7d6ff", shadow: "#3553d6", light: new THREE.Vector3(0.1, 0.35, 1), spectrum: true });
 const puffs = [];
 // a towering cumulus: billows stacked into a column that leans and narrows
 function tower(cx, cz, h, base) {
@@ -160,13 +162,14 @@ function tower(cx, cz, h, base) {
     for (let i = 0; i < n; i++) {
       const a = rnd() * Math.PI * 2;
       const rr = w * Math.sqrt(rnd());
-      puffs.push([cx + Math.cos(a) * rr + k * 6, y, cz + Math.sin(a) * rr * 0.5, 2.2 + rnd() * 3 * (1 - k * 0.4)]);
+      puffs.push([cx + Math.cos(a) * rr + k * 6, y, cz + Math.sin(a) * rr * 0.5, 2.2 + rnd() * 3 * (1 - k * 0.4), -1, 0]);
     }
   }
 }
 tower(-46, -150, 62, 13);
 tower(70, -175, 26, 9);
-// streaks: fine ribbons of small billows fanning out of the sun
+// streaks: fine ribbons of small billows fanning out of the sun.
+// Each streak is one frequency band, low on the left to high on the right: together they are the song's spectrum.
 for (let i = 0; i < 12; i++) {
   const a = (6 + (i / 11) * 168 + (rnd() - 0.5) * 6) * (Math.PI / 180);
   const dir = new THREE.Vector2(Math.cos(a), Math.sin(a));
@@ -175,11 +178,13 @@ for (let i = 0; i < 12; i++) {
     if (rnd() < 0.12) r += 4; // a gap now and then
     const side = Math.sin(r * 0.08 + i) * r * 0.025;
     const size = (0.45 + r * 0.014) * (0.7 + rnd() * 0.6);
-    puffs.push([SUN_HOME.x + dir.x * r - dir.y * side, SUN_HOME.y - 6 + dir.y * r * 0.55 + dir.x * side, SUN_HOME.z + 15, size]);
+    puffs.push([SUN_HOME.x + dir.x * r - dir.y * side, SUN_HOME.y - 6 + dir.y * r * 0.55 + dir.x * side, SUN_HOME.z + 15, size, 11 - i, (r - start) / (150 - start)]);
   }
 }
 const puffMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), puffMat, puffs.length);
 puffs.forEach(([x, y, z, r], i) => puffMesh.setMatrixAt(i, new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion(), new THREE.Vector3(r, r * 0.85, r))));
+puffMesh.geometry.setAttribute("aBand", new THREE.InstancedBufferAttribute(new Float32Array(puffs.map((p) => p[4])), 1));
+puffMesh.geometry.setAttribute("aAlong", new THREE.InstancedBufferAttribute(new Float32Array(puffs.map((p) => p[5])), 1));
 puffMesh.frustumCulled = false;
 scene.add(puffMesh);
 
@@ -421,13 +426,53 @@ const landmarks = [makeGate(), makeTower()];
 {
   const gz = -13, gx = pathX(gz);
   landmarks[0].root.position.set(gx, height(gx, gz) - 0.1, gz);
-  landmarks[0].root.rotation.y = Math.atan2(0 - gx, 9 - gz) * 0.8;
+  const slope = (pathX(gz - 0.1) - gx) / 0.1;
+  landmarks[0].root.rotation.y = Math.atan2(-slope, 1);
   const tx = 44, tz = -110;
   landmarks[1].root.position.set(tx, height(tx, tz) - 3, tz);
   landmarks[1].root.rotation.y = -0.25;
   landmarks[1].root.scale.setScalar(1.0);
 }
 const doorDark = new THREE.Color("#10173a"), doorLit = new THREE.Color("#ffe6a3");
+
+// --- things hidden in the world, for people who look ---
+// A delivery left on the gate's doorstep.
+const parcel = makeParcel();
+parcel.position.set(0.55, 0.05, 0.75);
+parcel.rotation.y = -0.4;
+landmarks[0].root.add(parcel);
+// While its song is quiet, the gate's doorway taps out D O O R in Morse: dots and dashes.
+const MORSE = "-.. --- --- .-.";
+const morseOn = [];
+for (const ch of MORSE) {
+  if (ch === " ") { morseOn.push(0, 0); continue; } // with the gap after each mark, three units between letters
+  morseOn.push(...(ch === "." ? [1] : [1, 1, 1]), 0);
+}
+morseOn.push(0, 0, 0, 0, 0, 0, 0);
+// A stone war dog keeps watch at the foot of the tower.
+const dog = makeDog();
+dog.root.position.set(-3.6, 16.65, 4.4);
+dog.root.scale.setScalar(1.25);
+landmarks[1].root.add(dog.root);
+const eyeDark = new THREE.Color("#10173a"), eyeLit = new THREE.Color("#ff7a1a");
+// Its paw prints are pressed into the path, one by one, while its song plays.
+const PAWS = 70;
+const pawMesh = new THREE.InstancedMesh(pawGeometry(), new THREE.MeshBasicMaterial({ color: "#3a2f22", transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }), PAWS);
+{
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion();
+  for (let i = 0; i < PAWS; i++) {
+    const z = 7 - i * 0.42;
+    const x = pathX(z) + (i % 2 ? 0.16 : -0.16) + Math.sin(i * 1.7) * 0.05;
+    const dir = Math.atan2(-(pathX(z - 0.1) - pathX(z)) / 0.1, 1);
+    q.setFromEuler(new THREE.Euler(0, dir, 0));
+    m.compose(new THREE.Vector3(x, height(x, z) + 0.07, z), q, new THREE.Vector3(1, 1, 1));
+    pawMesh.setMatrixAt(i, m);
+  }
+}
+pawMesh.count = 0;
+pawMesh.frustumCulled = false;
+scene.add(pawMesh);
+let pawsShown = 0;
 // stone sits in grey-blue shadow under the storm and warms as the light returns
 const stoneMats = [];
 landmarks.forEach((lm) => lm.root.traverse((o) => {
@@ -465,7 +510,7 @@ try { life = Math.min(0.5, (parseFloat(localStorage.getItem("new-dawn-life")) ||
 let lastSave = 0;
 
 // ---------- leaves and petals riding the wind ----------
-const LEAVES = small ? 140 : 220;
+const LEAVES = small ? 80 : 130;
 const leafMesh = new THREE.InstancedMesh(leafGeometry(), new THREE.MeshLambertMaterial({ side: THREE.DoubleSide }), LEAVES);
 leafMesh.frustumCulled = false;
 const leaves = [];
@@ -485,7 +530,7 @@ function respawnLeaf(L, anywhere, i = -1) {
     leafMesh.setColorAt(i, new THREE.Color(pal[Math.floor(rnd() * pal.length)]));
     leafMesh.instanceColor.needsUpdate = true;
   }
-  L.p.set(camera.position.x + (anywhere ? (rnd() * 2 - 1) * 14 : -16 - rnd() * 4), 0.3 + rnd() * 6.5, camera.position.z - 4.5 - rnd() * 20);
+  L.p.set(camera.position.x + (anywhere ? (rnd() * 2 - 1) * 14 : -16 - rnd() * 4), 0.3 + rnd() * 3, camera.position.z - 4.5 - rnd() * 20);
   L.v.set(0, 0, 0);
   L.burst = false;
 }
@@ -511,18 +556,10 @@ pollenGeo.setAttribute("position", new THREE.BufferAttribute(pollenPos, 3));
 const pollen = new THREE.Points(pollenGeo, new THREE.PointsMaterial({ size: 0.14, map: glowTexture("rgba(255,250,210,1)", "rgba(255,230,140,0)"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
 scene.add(pollen);
 
-// butterflies
-const butterflies = Array.from({ length: 6 }, (_, i) => {
-  const b = makeButterfly(RAINBOW[(i * 3) % RAINBOW.length]);
-  b.phase = rnd() * 10;
-  b.home = new THREE.Vector3((rnd() * 2 - 1) * 5, 1.2 + rnd() * 2, 3 - rnd() * 6);
-  scene.add(b.root);
-  return b;
-});
-
 // ---------- audio ----------
-let actx, analyser, freq, current = -1, playing = false;
+let actx, analyser, freq, volume, volLevel = 0.8, current = -1, playing = false;
 const visited = TRACKS.map(() => false);
+const bands = new Array(12).fill(0), bandsSmooth = new Array(12).fill(0);
 
 const voices = [];
 function startAudio() {
@@ -530,7 +567,9 @@ function startAudio() {
   analyser = actx.createAnalyser();
   analyser.fftSize = 1024;
   analyser.smoothingTimeConstant = 0.78;
-  analyser.connect(actx.destination);
+  volume = actx.createGain();
+  volume.gain.value = volLevel;
+  analyser.connect(volume).connect(actx.destination);
   freq = new Uint8Array(analyser.frequencyBinCount);
   TRACKS.forEach((t, i) => {
     const el = new Audio(t.src);
@@ -538,7 +577,7 @@ function startAudio() {
     const g = actx.createGain();
     g.gain.value = 0;
     actx.createMediaElementSource(el).connect(g).connect(analyser);
-    el.addEventListener("ended", () => compass.swingTo((i + 1) % TRACKS.length));
+    el.addEventListener("ended", () => play((i + 1) % TRACKS.length));
     voices.push({ el, g });
   });
 }
@@ -559,170 +598,77 @@ function play(i) {
     current = i; playing = true;
     if (!visited[i]) { visited[i] = true; life = Math.min(1, life + 0.06); }
   }
+  player.sync();
 
 }
 function levels() {
   if (!analyser) return { bass: 0, mid: 0, high: 0 };
   analyser.getByteFrequencyData(freq);
   const band = (a, b) => { let s = 0; for (let k = a; k < b; k++) s += freq[k]; return s / ((b - a) * 255); };
+  // twelve bands, log-spaced, for the cloud streaks
+  for (let b = 0; b < 12; b++) {
+    const lo = Math.floor(2 * Math.pow(180, b / 12)), hi = Math.max(lo + 1, Math.floor(2 * Math.pow(180, (b + 1) / 12)));
+    bands[b] = band(lo, hi);
+  }
   return { bass: band(1, 6), mid: band(6, 60), high: band(60, 200) };
 }
 
-// ---------- the compass: spin the needle; whatever it points at plays ----------
-const compass = (() => {
-  const cv = document.getElementById("compass");
-  const g = cv.getContext("2d");
-  let W = 0, H = 0, R = 0, cx = 0, cy = 0, dpr = 1;
-  let angle = -Math.PI / 2, vel = 0, dragging = false, lastA = 0, lastT = 0, swingTarget = -1, glow = 0;
-  const targets = TRACKS.map(() => -Math.PI / 2);
-  const SNAP = 0.22; // radians: how close the needle must rest to a place to wake it
-  function size() {
-    dpr = Math.min(devicePixelRatio || 1, 2);
-    const css = Math.min(innerWidth * 0.56, innerHeight * 0.36, 300);
-    cv.style.width = cv.style.height = css + "px";
-    W = H = Math.round(css * dpr);
-    cv.width = W; cv.height = H;
-    R = W * 0.44; cx = W / 2; cy = H / 2;
-  }
-  size();
-  addEventListener("resize", size);
-  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-  // screen angle from the dial's centre to each place's doorway
-  function aim() {
-    const rect = cv.getBoundingClientRect();
-    const ox = rect.left + rect.width / 2, oy = rect.top + rect.height / 2;
-    landmarks.forEach((lm, i) => {
-      const p = lm.door.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, i ? 12 : 2, 0)).project(camera);
-      const x = (p.x * 0.5 + 0.5) * innerWidth, y = (-p.y * 0.5 + 0.5) * innerHeight;
-      // both places sit high in the frame, so spread their bearings out to make them easy to find
-      const raw = wrap(Math.atan2(y - oy, x - ox) + Math.PI / 2);
-      targets[i] = -Math.PI / 2 + Math.max(-1.35, Math.min(1.35, raw * 3.2));
-    });
-  }
-  function nearest() {
-    let best = -1, bd = Infinity;
-    targets.forEach((a, i) => { const d = Math.abs(wrap(angle - a)); if (d < bd) { bd = d; best = i; } });
-    return { i: best, d: bd };
-  }
-  function settle() {
-    const n = nearest();
-    if (n.d < SNAP) { if (current !== n.i || !playing) play(n.i); }
-    else if (playing) play(current); // pointing at nothing: the music rests
-  }
-  const pAngle = (e) => {
-    const r = cv.getBoundingClientRect();
-    return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
+// ---------- the player strip: pick a place, scrub the horizon, set the volume ----------
+const player = (() => {
+  const root = document.getElementById("player");
+  const places = [...root.querySelectorAll(".place")];
+  const pp = document.getElementById("pp"), seek = document.getElementById("seek"), vol = document.getElementById("vol");
+  const tNow = document.getElementById("t-now"), tEnd = document.getElementById("t-end");
+  let scrubbing = false;
+  const fmt = (s) => (isFinite(s) ? Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") : "0:00");
+  places.forEach((b, i) => b.addEventListener("click", () => { if (!entered) return; if (i === current) play(i); else play(i); }));
+  pp.addEventListener("click", () => entered && play(current < 0 ? 0 : current));
+  seek.addEventListener("input", () => {
+    scrubbing = true;
+    const v = current >= 0 ? voices[current] : null;
+    if (v && v.el.duration) tNow.textContent = fmt((seek.value / 1000) * v.el.duration);
+  });
+  seek.addEventListener("change", () => {
+    const v = current >= 0 ? voices[current] : null;
+    if (v && v.el.duration) v.el.currentTime = (seek.value / 1000) * v.el.duration;
+    scrubbing = false;
+  });
+  try { const saved = parseFloat(localStorage.getItem("new-dawn-volume")); if (saved >= 0 && saved <= 1) volLevel = saved; } catch (e) {}
+  vol.value = Math.round(volLevel * 100);
+  vol.addEventListener("input", () => {
+    volLevel = vol.value / 100;
+    if (volume) volume.gain.setTargetAtTime(volLevel, actx.currentTime, 0.03);
+    root.style.setProperty("--vol", volLevel);
+    try { localStorage.setItem("new-dawn-volume", String(volLevel)); } catch (e) {}
+  });
+  root.style.setProperty("--vol", volLevel);
+  return {
+    sync() {
+      places.forEach((b, i) => b.setAttribute("aria-pressed", String(i === current)));
+      pp.setAttribute("aria-label", playing ? "Pause" : "Play");
+      root.classList.toggle("playing", playing);
+    },
+    tick(progress, bass) {
+      const v = current >= 0 ? voices[current] : null;
+      if (!scrubbing) seek.value = Math.round(progress * 1000);
+      root.style.setProperty("--p", progress);
+      root.style.setProperty("--beat", bass.toFixed(3));
+      if (v) { if (!scrubbing) tNow.textContent = fmt(v.el.currentTime); tEnd.textContent = fmt(v.el.duration); }
+      root.style.opacity = entered ? 1 : 0;
+    },
+    nudgeVolume(d) { vol.value = Math.max(0, Math.min(100, +vol.value + d)); vol.dispatchEvent(new Event("input")); },
   };
-  cv.addEventListener("pointerdown", (e) => {
-    if (!entered) return;
-    cv.setPointerCapture(e.pointerId);
-    const r = cv.getBoundingClientRect();
-    const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
-    if (dist < r.width * 0.12) { if (current >= 0) play(current); return; } // the hub pauses and resumes
-    dragging = true; swingTarget = -1;
-    lastA = pAngle(e); lastT = performance.now(); vel = 0;
-    angle = lastA;
-  });
-  cv.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const a = pAngle(e), now = performance.now();
-    const da = wrap(a - lastA);
-    vel = vel * 0.5 + (da / Math.max(1, now - lastT)) * 16 * 0.5;
-    angle = a; lastA = a; lastT = now;
-  });
-  const up = () => { if (!dragging) return; dragging = false; if (Math.abs(vel) < 0.02) settle(); };
-  cv.addEventListener("pointerup", up);
-  cv.addEventListener("pointercancel", up);
-
-  function swingTo(i) { swingTarget = i; vel = 0; }
-
-  function draw(dt, t, progress, bass) {
-    aim();
-    if (!dragging) {
-      if (swingTarget >= 0) {
-        const d = wrap(targets[swingTarget] - angle);
-        angle += d * (1 - Math.pow(0.94, dt * 60));
-        if (Math.abs(d) < 0.05) { if (current !== swingTarget || !playing) play(swingTarget); swingTarget = -1; }
-      } else if (Math.abs(vel) > 0.0005) {
-        angle += vel * dt * 60;
-        vel *= Math.pow(0.965, dt * 60);
-        const n = nearest();
-        if (Math.abs(vel) < 0.03 && n.d < SNAP * 1.6) vel += wrap(targets[n.i] - angle) * 0.02; // drawn toward a place
-        if (Math.abs(vel) <= 0.0005) settle();
-      } else if (current >= 0 && playing) {
-        angle += wrap(targets[current] - angle) * (1 - Math.pow(0.9, dt * 60)); // keep pointing as you walk
-      }
-    }
-    glow += ((playing ? 1 : 0) - glow) * (1 - Math.pow(0.95, dt * 60));
-
-    g.clearRect(0, 0, W, H);
-    g.save();
-    g.translate(cx, cy);
-    // body: paper ring, ultramarine face
-    g.fillStyle = "rgba(10,16,51,0.35)";
-    g.beginPath(); g.arc(0, R * 0.06, R * 1.04, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#efe3c4";
-    g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.fill();
-    g.lineWidth = 2.2 * dpr; g.strokeStyle = "#0a1033"; g.stroke();
-    g.fillStyle = "#0f2aa8";
-    g.beginPath(); g.arc(0, 0, R * 0.8, 0, Math.PI * 2); g.fill(); g.stroke();
-    // stipple on the face
-    g.fillStyle = "rgba(255,255,255,0.18)";
-    for (let i = 0; i < 160; i++) {
-      const a = i * 2.39996, r = R * 0.78 * Math.sqrt(((i * 97) % 160) / 160);
-      g.fillRect(Math.cos(a) * r, Math.sin(a) * r, dpr, dpr);
-    }
-    // the sun-star at the heart, like the rays over the hills
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2 + t * 0.02;
-      const len = R * (i % 2 ? 0.42 : 0.66) * (1 + glow * bass * 0.15);
-      g.fillStyle = i % 2 ? "#ffb23a" : "#ff6a1a";
-      g.beginPath();
-      g.moveTo(Math.cos(a - 0.09) * R * 0.14, Math.sin(a - 0.09) * R * 0.14);
-      g.lineTo(Math.cos(a) * len, Math.sin(a) * len);
-      g.lineTo(Math.cos(a + 0.09) * R * 0.14, Math.sin(a + 0.09) * R * 0.14);
-      g.closePath(); g.fill();
-    }
-    // engraved ticks on the ring
-    g.strokeStyle = "#0a1033";
-    for (let i = 0; i < 72; i++) {
-      const a = (i / 72) * Math.PI * 2;
-      const r0 = i % 6 ? R * 0.9 : R * 0.84;
-      g.lineWidth = (i % 6 ? 1 : 1.8) * dpr;
-      g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a) * R * 0.97, Math.sin(a) * R * 0.97); g.stroke();
-    }
-    // a warm notch on the rim where each place lies
-    targets.forEach((a, i) => {
-      const on = i === current ? glow : 0;
-      g.fillStyle = on > 0.1 ? `rgba(255,${Math.round(150 + on * 80)},60,1)` : "#ff7a1a";
-      g.beginPath(); g.arc(Math.cos(a) * R * 0.9, Math.sin(a) * R * 0.9, R * (0.045 + on * 0.02 + on * bass * 0.03), 0, Math.PI * 2); g.fill();
-      g.lineWidth = 1.5 * dpr; g.strokeStyle = "#0a1033"; g.stroke();
-    });
-    // how far the song has come, burned into the rim
-    if (current >= 0 && progress > 0) {
-      g.strokeStyle = `rgba(255,122,26,${0.5 + glow * 0.5})`;
-      g.lineWidth = R * 0.05;
-      g.beginPath(); g.arc(0, 0, R * 1.0 + R * 0.04, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2); g.stroke();
-    }
-    // the needle
-    g.rotate(angle);
-    g.fillStyle = "#0a1033";
-    g.beginPath(); g.moveTo(R * 0.86, 0); g.lineTo(-R * 0.1, R * 0.07); g.lineTo(-R * 0.3, 0); g.lineTo(-R * 0.1, -R * 0.07); g.closePath(); g.fill();
-    g.fillStyle = "#f4ead2";
-    g.beginPath(); g.moveTo(R * 0.86, 0); g.lineTo(R * 0.55, R * 0.035); g.lineTo(R * 0.55, -R * 0.035); g.closePath(); g.fill();
-    g.rotate(-angle);
-    // the hub
-    g.fillStyle = "#f4ead2";
-    g.beginPath(); g.arc(0, 0, R * 0.11, 0, Math.PI * 2); g.fill();
-    g.lineWidth = 2 * dpr; g.strokeStyle = "#0a1033"; g.stroke();
-    g.fillStyle = "#0a1033";
-    if (playing) { g.fillRect(-R * 0.04, -R * 0.045, R * 0.025, R * 0.09); g.fillRect(R * 0.015, -R * 0.045, R * 0.025, R * 0.09); }
-    else { g.beginPath(); g.moveTo(-R * 0.03, -R * 0.05); g.lineTo(R * 0.05, 0); g.lineTo(-R * 0.03, R * 0.05); g.closePath(); g.fill(); }
-    g.restore();
-    cv.style.opacity = entered ? 1 : 0;
-  }
-  return { draw, swingTo, targets };
 })();
+
+function pickLandmark() {
+  ray.setFromCamera(ndc, camera);
+  let best = -1, bestD = Infinity;
+  landmarks.forEach((lm, i) => {
+    const hit = ray.intersectObject(lm.root, true)[0];
+    if (hit && hit.distance < bestD) { best = i; bestD = hit.distance; }
+  });
+  return best;
+}
 
 // ---------- input ----------
 const ray = new THREE.Raycaster();
@@ -731,23 +677,36 @@ const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let pointerSpeed = 0, lastPX = 0, lastPY = 0, entered = false;
 const gustTarget = new THREE.Vector3(0, -100, 0);
 
-addEventListener("pointermove", (e) => {
+let hovered = -1;
+canvas.addEventListener("pointermove", (e) => {
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   pointerSpeed = Math.min(1.6, pointerSpeed + Math.hypot(e.clientX - lastPX, e.clientY - lastPY) / 60);
   lastPX = e.clientX; lastPY = e.clientY;
   ray.setFromCamera(ndc, camera);
   const hit = new THREE.Vector3();
   if (ray.ray.intersectPlane(groundPlane, hit)) gustTarget.set(hit.x, hit.z, 0);
+  hovered = pickLandmark();
+  canvas.style.cursor = hovered >= 0 && entered ? "pointer" : "";
 
 });
 canvas.addEventListener("click", (e) => {
   if (!entered) return;
-  pointerSpeed = 1.8; // a tap on the meadow sends a gust through it
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  const i = pickLandmark();
+  if (ray.intersectObject(sun.disc)[0]) { kick = 1; sunSpin = 2.5; pointerSpeed = 2; burst(new THREE.Vector3(camera.position.x, 1.5, camera.position.z - 5), POPPY, 24); return; }
+  if (i >= 0) play(i);
+  else pointerSpeed = 1.8; // a tap on the meadow sends a gust through it
 });
 addEventListener("keydown", (e) => {
   if (!entered) return;
-  if (e.code === "Space") { e.preventDefault(); if (current >= 0) play(current); }
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft") compass.swingTo(current < 0 ? 0 : (current + 1) % TRACKS.length);
+  if (e.target.closest && e.target.closest("input, button")) return; // native controls handle their own keys
+  const v = current >= 0 ? voices[current] : null;
+  if (e.code === "Space") { e.preventDefault(); play(current < 0 ? 0 : current); }
+  if (v && e.key === "ArrowRight") v.el.currentTime = Math.min(v.el.duration || 0, v.el.currentTime + 5);
+  if (v && e.key === "ArrowLeft") v.el.currentTime = Math.max(0, v.el.currentTime - 5);
+  if (e.key === "ArrowUp") { e.preventDefault(); player.nudgeVolume(5); }
+  if (e.key === "ArrowDown") { e.preventDefault(); player.nudgeVolume(-5); }
+  if (e.key === "1" || e.key === "2") play(+e.key - 1);
 });
 
 // ---------- entry ----------
@@ -758,12 +717,13 @@ gate.addEventListener("click", () => {
   entered = true;
   startAudio();
   gate.classList.add("gone");
-  setTimeout(() => compass.swingTo(0), 1200);
+  setTimeout(() => play(0), 900);
 }, { once: true });
 
 // ---------- loop ----------
 const clock = new THREE.Clock();
-let bass = 0, mid = 0, high = 0, bassAvg = 0, lastBurst = 0;
+let bass = 0, mid = 0, high = 0, bassAvg = 0, lastBurst = 0, kick = 0, sunSpin = 0, sunAngle = 0;
+const pondLit = new THREE.Color("#4d6dff");
 const tmp = new THREE.Vector3(), mtx = new THREE.Matrix4(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
 const ease = (x) => 1 - Math.pow(1 - x, 3);
 let walkZ = camBase.z, walkGoal = camBase.z;
@@ -786,7 +746,10 @@ function frame() {
   const sunY = THREE.MathUtils.lerp(-6, SUN_HOME.y, rise);
   sun.root.position.set(SUN_HOME.x, sunY, SUN_HOME.z);
   sun.root.lookAt(camera.position);
-  sun.rays.rotation.z = t * 0.03;
+  sunSpin *= Math.pow(0.97, dt * 60);
+  sunAngle += dt * (0.03 + sunSpin);
+  sun.rays.rotation.z = sunAngle;
+  sun.rays.scale.setScalar(1 + bass * 0.35 + kick * 0.1);
   sun.rays.material.opacity = THREE.MathUtils.smoothstep(life, 0.3, 0.75) * (0.75 + bass * 0.5);
   const pulse = 1 + bass * 0.12;
   sun.root.scale.setScalar(pulse);
@@ -820,16 +783,33 @@ function frame() {
   landmarks.forEach((lm, i) => {
     const on = i === current && playing ? 1 : 0;
     lm.glow += (on - lm.glow) * k(0.03);
-    lm.light.color.copy(doorDark).lerp(doorLit, Math.min(1, lm.glow * (0.75 + bass * 0.4)));
+    let idle = 0;
+    if (i === 0) idle = morseOn[Math.floor(t / 0.2) % morseOn.length] * 0.35 * (1 - lm.glow);
+    lm.light.color.copy(doorDark).lerp(doorLit, Math.min(1, lm.glow * (0.75 + bass * 0.4) + idle));
     lm.halo.material.opacity = lm.glow * (0.55 + bass * 0.6) * THREE.MathUtils.smoothstep(life, 0.0, 0.3) + lm.glow * 0.25;
   });
   const v = current >= 0 ? voices[current] : null;
   const progress = v && v.el.duration ? v.el.currentTime / v.el.duration : 0;
-  compass.draw(dt, t, progress, bass);
+  player.tick(progress, bass);
+  dog.eyes.color.copy(eyeDark).lerp(eyeLit, landmarks[1].glow * (0.6 + bass * 0.8));
+  if (current === 1 && playing) pawsShown = Math.max(pawsShown, Math.floor(Math.min(1, progress * 1.15) * PAWS));
+  pawMesh.count = pawsShown;
+
+  // the cloud streaks are the spectrum
+  for (let b = 0; b < 12; b++) {
+    const target = playing ? Math.min(1, bands[b] * (1.1 + b * 0.06)) : 0;
+    bandsSmooth[b] += (target - bandsSmooth[b]) * (target > bandsSmooth[b] ? k(0.5) : k(0.12));
+  }
+  puffMat.uniforms.uBands.value = bandsSmooth;
+  puffMat.uniforms.uBass.value = bass;
+  kick *= Math.pow(0.9, dt * 60);
+  post.material.uniforms.uKick.value = kick;
+  pondMat.color.set("#1d39c4").lerp(pondLit, Math.min(1, high * 2.5));
 
   // the music moves the wind: each kick sends a gust and a scatter of petals across the meadow
   if (playing && bass > 0.5 && bass > bassAvg * 1.22 && t - lastBurst > 0.4) {
     lastBurst = t;
+    kick = 1;
     const ahead = camera.position.z - 3 - rnd() * 6;
     const gx = pathX(ahead) + (rnd() - 0.5) * 8;
     gustTarget.set(gx, ahead, 0);
@@ -859,7 +839,7 @@ function frame() {
     if (pointerSpeed > 0.1 && gd < 12) { Lf.v.x += (gx / (gd + 0.5)) * pointerSpeed * 0.3; Lf.v.y += pointerSpeed * 0.08; }
     p.addScaledVector(Lf.v, dt);
     const cz = camera.position.z, cx = camera.position.x;
-    if (p.x > cx + 16 || p.y < -0.2 || p.y > 12 || p.z > cz - 3.5 || p.z < cz - 28) respawnLeaf(Lf, false, i);
+    if (p.x > cx + 16 || p.y < -0.2 || p.y > 5 || p.z > cz - 3.5 || p.z < cz - 28) respawnLeaf(Lf, false, i);
     Lf.r.x += Lf.w.x * dt * (0.6 + Math.abs(Lf.v.x) * 0.3);
     Lf.r.y += Lf.w.y * dt;
     Lf.r.z += Lf.w.z * dt;
@@ -880,17 +860,6 @@ function frame() {
   pollenGeo.attributes.position.needsUpdate = true;
   pollen.material.size = 0.12 + high * 0.25;
   pollen.material.opacity = THREE.MathUtils.smoothstep(life, 0.3, 0.8);
-
-  // butterflies keep you company along the road
-  butterflies.forEach((b, i) => {
-    const ph = t * 0.5 + b.phase;
-    const target = tmp.set(camera.position.x + b.home.x, b.home.y, camera.position.z - 6 + b.home.z);
-    const r = 1.2 + (playing ? bass : 0);
-    b.root.position.lerp(new THREE.Vector3(target.x + Math.cos(ph) * r, target.y + Math.sin(ph * 1.7) * 0.5, target.z + Math.sin(ph) * r * 0.6), 0.02);
-    const flap = Math.sin(t * 14 + b.phase) * 1.1;
-    b.L.rotation.y = flap; b.R.rotation.y = -flap;
-    b.root.rotation.y = -ph;
-  });
 
   // clouds lighten and lift; rain thins out and stops
   const clear = THREE.MathUtils.smoothstep(life, 0.15, 0.7);
@@ -948,4 +917,4 @@ addEventListener("resize", () => {
 });
 
 // for the poster/export tools
-window.NEW_DAWN = { scene, camera, renderer, play, landmarks, compass, setLife: (v) => { life = v; }, get current() { return current; }, get playing() { return playing; } };
+window.NEW_DAWN = { scene, camera, renderer, play, landmarks, voices, setLife: (v) => { life = v; }, get current() { return current; }, get playing() { return playing; } };
