@@ -1,11 +1,12 @@
 import * as THREE from "three";
-import { makeCloud, mulberry, toonMaterial, makeParcel } from "./assets.js";
+import { makeCloud, mulberry, toonMaterial, makeParcel, leafGeometry, printSunTextures, glowTexture } from "./assets.js";
 import { makeBuilding, fireEscapeGeometry, streetTexture, sidewalkTexture, makeCar, makeLamp, makeStoop, makeBridge, makeSkyline } from "./city.js";
-import * as D from "./doodles.js";
+import { COLORS, MARDI, muralTexture, splatTexture, dogStencil, paintMaterial, beadStrand, buntingGeometry } from "./color.js";
 
 // A city street in the rain, grey and empty. The first song brings the colour back down the
-// street and the drawings start to grow out of it; the second clears the sky over the bridge
-// and the whole city comes alive. Each song lives in a place: the front door, and the bridge.
+// street: paint spreads over the walls, beads and bunting go up, leaves gust through. The second
+// paints the bridge, fills the air with confetti and turns the sky into a purple-and-gold sunset.
+// Each song lives in a place: the front door, and the bridge.
 const TRACKS = [
   { title: "doordash", src: "music/doordash.mp3" },
   { title: "wardoggin", src: "music/wardoggin.mp3" },
@@ -96,8 +97,10 @@ scene.add(new THREE.Mesh(
       void main(){
         float y = max(vDir.y, 0.0);
         vec3 grey = mix(vec3(0.66, 0.68, 0.72), vec3(0.5, 0.53, 0.58), smoothstep(0.0, 0.6, y));
-        vec3 blue = mix(vec3(0.84, 0.92, 0.98), vec3(0.38, 0.66, 0.95), smoothstep(0.0, 0.55, y));
-        gl_FragColor = vec4(mix(grey, blue, uClear), 1.0);
+        // a Mardi Gras sunset: gold at the horizon, purple above, deep blue overhead
+        vec3 sunset = mix(vec3(0.98, 0.66, 0.24), vec3(0.45, 0.2, 0.55), smoothstep(0.0, 0.22, y));
+        sunset = mix(sunset, vec3(0.1, 0.12, 0.38), smoothstep(0.18, 0.7, y));
+        gl_FragColor = vec4(mix(grey, sunset, uClear), 1.0);
       }`,
   })
 ));
@@ -114,7 +117,7 @@ for (let i = 0; i < 12; i++) {
   clouds.push(c);
   scene.add(c);
 }
-const fairMat = toonMaterial({ lit: "#ffffff", mid: "#e4eefc", shadow: "#a8c2ea", light: new THREE.Vector3(-0.3, 0.6, 0.6) });
+const fairMat = toonMaterial({ lit: "#ffd28a", mid: "#c0605a", shadow: "#3b2a6e", light: new THREE.Vector3(-0.6, -0.1, 0.6) });
 const fair = [[-70, 70, -170], [80, 64, -190], [-20, 84, -230]].map(([x, y, z], i) => {
   const c = makeCloud(i + 40);
   c.traverse((o) => o.isMesh && (o.material = fairMat));
@@ -145,7 +148,8 @@ const STREET_HALF = 5, WALK = 3, FRONT = STREET_HALF + WALK; // building fronts 
 // warehouse blocks down both sides, with fire escapes on the street fronts
 const BRICKS = ["#8e3b2c", "#9c4a34", "#7d3427", "#a5553c", "#6e3a2e", "#93432f"];
 const escapeMat = new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 0.7, metalness: 0.4 });
-const facades = []; // stretches of building front where drawings can grow
+const facades = []; // stretches of building front where paint can spread
+const escapes = [];
 [-1, 1].forEach((s, si) => {
   let z = 20;
   let k = 0;
@@ -159,6 +163,7 @@ const facades = []; // stretches of building front where drawings can grow
       esc.position.set(s * FRONT, 0, z - width * (0.3 + rnd() * 0.4));
       if (s > 0) esc.rotation.y = Math.PI;
       scene.add(esc);
+      escapes.push({ s, z: esc.position.z, floors: b.userData.floors });
     }
     facades.push({ s, z0: z, z1: z - width, h: height });
     z -= width + 0.2;
@@ -215,66 +220,116 @@ for (const ch of "-.. --- --- .-.") {
 }
 morseOn.push(0, 0, 0, 0, 0, 0, 0);
 
-// ---------- the drawings ----------
-// Every drawing waits for its moment in the story (t0 on a 0..2 scale: the first song is 0..1,
-// the second 1..2), then pops up and sways. Ground drawings grow from their base.
-const doodles = [];
-const TEX = {
-  pinkDaisy: D.daisy(), whiteDaisy: D.daisy({ color: "#ffffff", petals: 16 }), hotDaisy: D.daisy({ color: D.PALETTE.hot, mood: "singing", stem: false }),
-  tulip: D.tulip(), tulip2: D.tulip({ outer: D.PALETTE.pink, inner: D.PALETTE.coral }), spotted: D.spotted(), spotted2: D.spotted({ color: D.PALETTE.pink, mood: "singing" }),
-  heart: D.heartPetal(), leaf: D.leaf(), leaf2: D.leaf({ color: "#41b44c" }), sun: D.sunDoodle(), sparkle: D.sparkle(), sparkleW: D.sparkle({ color: "#ffffff" }),
-  ribbon: D.ribbon(), ribbon2: D.ribbon({ color: D.PALETTE.lilac }), rainbow: D.rainbowArch(), singer: D.singer(), ladybug: D.ladybug(), bird: D.bird(),
-  dog: D.dogPeek(), sad: D.sadFlower(), bigDaisy: D.daisy({ petals: 18 }),
-};
-function doodle(tex, x, y, z, size, t0, { ground = false, aspect = null, spin = 0, sway = 1 } = {}) {
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.35, fog: false });
-  const s = new THREE.Sprite(mat);
-  const a = aspect ?? tex.image.width / tex.image.height;
-  s.position.set(x, y, z);
-  if (ground) s.center.set(0.5, 0);
-  s.visible = false;
-  scene.add(s);
-  const d = { s, mat, size, a, t0, spin, sway, phase: rnd() * 10, shown: 0 };
-  doodles.push(d);
-  return d;
+// ---------- colour coming back ----------
+// Everything waits for its moment in the story (t0 on a 0..2 scale: the first song is 0..1,
+// the second 1..2). Nearer things come first, so the colour runs down the street.
+const zMoment = (z) => 0.06 + THREE.MathUtils.clamp((8 - z) / 92, 0, 1) * 0.85;
+const painted = []; // surfaces paint spreads across: { mat, t0 }
+function paint(map, w, h, pos, rotY, t0, rotX = 0) {
+  const mat = paintMaterial(map);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+  m.position.copy(pos);
+  m.rotation.set(rotX, rotY, 0);
+  scene.add(m);
+  painted.push({ mat, t0 });
+  return m;
 }
-const GROUND = [TEX.pinkDaisy, TEX.whiteDaisy, TEX.tulip, TEX.tulip2, TEX.spotted, TEX.leaf, TEX.heart, TEX.leaf2, TEX.spotted2];
-const WALL = [TEX.pinkDaisy, TEX.spotted, TEX.leaf, TEX.ribbon, TEX.singer, TEX.tulip, TEX.ribbon2, TEX.heart, TEX.leaf2];
-// first song: flowers along the sidewalks, then up the walls, near to far
-for (let z = 8; z > -84; z -= 2.2 + rnd() * 1.6) {
-  const t0 = 0.04 + ((8 - z) / 92) * 0.85;
-  const s = rnd() < 0.5 ? -1 : 1;
-  const x = s * (STREET_HALF + 0.4 + rnd() * (WALK - 0.6));
-  doodle(GROUND[Math.floor(rnd() * GROUND.length)], x, 0.18, z, 1.4 + rnd() * 1.8, t0, { ground: true });
-}
+// murals across the brick, one or two per building
+let seed = 1;
 facades.forEach((f) => {
-  const n = Math.max(1, Math.round((f.z0 - f.z1) / 5));
+  const width = f.z0 - f.z1;
+  const n = width > 13 && f.h > 24 ? 2 : 1;
   for (let i = 0; i < n; i++) {
-    const z = f.z0 - (i + 0.5) * ((f.z0 - f.z1) / n);
-    const y = 4 + rnd() * (f.h - 6);
-    const t0 = 0.1 + ((8 - z) / 92) * 0.85 + rnd() * 0.05;
-    const tex = WALL[Math.floor(rnd() * WALL.length)], size = 2.4 + rnd() * 2.6;
-    // sprites face the camera, so keep each one clear of the brick it hangs on
-    const half = (size * tex.image.width / tex.image.height) / 2;
-    doodle(tex, f.s * (FRONT - 0.3 - half), y, z, size, t0, { spin: (rnd() - 0.5) * 0.8 });
+    const w = Math.min(width - 2, 5 + rnd() * 4.5), h = 4 + rnd() * 5;
+    const y = 2.5 + h / 2 + rnd() * Math.max(0, f.h - h - 6);
+    const z = f.z1 + 0.75 + w / 2 + rnd() * Math.max(0, width - w - 1.5);
+    paint(muralTexture(seed++), w, h, new THREE.Vector3(f.s * (FRONT - 0.03), y, z), f.s > 0 ? -Math.PI / 2 : Math.PI / 2, zMoment(z) + 0.05 * i);
   }
 });
-// the one flower already here in the rain, drooping by the kerb; it is the first to wake
-const sadOne = doodle(TEX.sad, -STREET_HALF - 0.5, 0.18, -2, 2.6, -1, { ground: true });
-// second song: the bridge, the sky and everything over the street
-doodle(TEX.dog, -2.6, 0, -93, 3.2, 1.25, { ground: true }); // the war dog, peeking from the grass
-const sunDoodle = doodle(TEX.sun, -26, 64, -150, 16, 1.1);
-doodle(TEX.leaf, -8, 22, -90, 14, 1.35, { spin: 0.5 });
-doodle(TEX.leaf2, 9, 24, -90, 13, 1.45, { spin: -0.6 });
-doodle(TEX.spotted, 30, 21, -91, 10, 1.55);
-doodle(TEX.tulip2, -32, 19, -91, 9, 1.6, { ground: true });
-doodle(TEX.ladybug, 5, 54, -97, 3.5, 1.65);
-doodle(TEX.rainbow, 0, 30, -60, 64, 1.75, { aspect: 2 });
-doodle(TEX.bigDaisy, 0, 19, -89, 22, 1.88, { ground: true }); // the finale, blooming on the bridge
-const sparkles = [];
-for (let i = 0; i < 14; i++) sparkles.push(doodle(rnd() < 0.5 ? TEX.sparkle : TEX.sparkleW, (rnd() - 0.5) * 40, 8 + rnd() * 40, -20 - rnd() * 70, 1.2 + rnd() * 2, 1.2 + rnd() * 0.75));
-for (let i = 0; i < 5; i++) doodle(TEX.bird, -20 + rnd() * 40, 30 + rnd() * 20, -60 - rnd() * 40, 2.5, 1.3 + rnd() * 0.5, { aspect: 2 });
-for (let i = 0; i < 6; i++) doodle([TEX.ribbon, TEX.ribbon2, TEX.heart, TEX.hotDaisy][i % 4], (rnd() - 0.5) * 9, 6 + rnd() * 12, -8 - rnd() * 60, 2.5 + rnd() * 2, 1.15 + rnd() * 0.7, { spin: (rnd() - 0.5) * 1.5 });
+// paint splashed across the street
+for (let z = 6; z > -84; z -= 5 + rnd() * 5) {
+  const size = 2.5 + rnd() * 3;
+  paint(splatTexture(seed++), size, size, new THREE.Vector3((rnd() - 0.5) * 8, 0.03, z), rnd() * Math.PI, zMoment(z), -Math.PI / 2);
+}
+// the war dog, stencilled on a wall near the bridge
+paint(dogStencil(), 3.4, 3.4, new THREE.Vector3(-(FRONT - 0.04), 2.6, -80), Math.PI / 2, 1.25);
+// the second song paints the bridge: tall bands up both tower legs
+[-6.5, 6.5].forEach((x, i) => paint(muralTexture(100 + i, 512, 2048), 3.1, 34, new THREE.Vector3(x, 33, -98 + 2.05), 0, 1.25 + i * 0.12));
+
+// Mardi Gras beads draped from the fire escapes and the lamps
+const strands = [];
+function drape(a, b, sag, t0) {
+  const g = beadStrand(a, b, sag, seed++);
+  g.scale.setScalar(0.001);
+  scene.add(g);
+  strands.push({ g, t0, shown: 0, phase: rnd() * 6 });
+}
+escapes.forEach((e) => {
+  for (let f = 2; f < Math.min(e.floors, 6); f += 1 + Math.floor(rnd() * 2)) {
+    const x = e.s * (FRONT - 1.1), y = f * 3.4 + 0.95;
+    drape(new THREE.Vector3(x, y, e.z - 1.5), new THREE.Vector3(x, y, e.z + 1.5), 0.5 + rnd() * 0.5, zMoment(e.z) + 0.04);
+  }
+});
+lamps.forEach((l) => {
+  const p = l.root.position;
+  const dir = l.root.rotation.y ? 1 : -1;
+  drape(new THREE.Vector3(p.x, 4.9, p.z), new THREE.Vector3(p.x + dir * 0.95, 4.7, p.z), 0.6, zMoment(p.z) + 0.02);
+});
+
+// bunting strung across the street
+const bunting = [];
+const buntMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.8 });
+for (let z = 0; z > -82; z -= 12 + rnd() * 5) {
+  const m = new THREE.Mesh(buntingGeometry(FRONT * 2, 1.2 + rnd() * 0.6, 20), buntMat);
+  m.position.set(0, 8.5 + rnd() * 3, z);
+  m.scale.setScalar(0.001);
+  scene.add(m);
+  bunting.push({ m, t0: zMoment(z) + 0.08, shown: 0, phase: rnd() * 6 });
+}
+
+// leaves gusting down the street toward you: a few soggy ones in the rain, a storm of colour later
+const LEAVES = small ? 220 : 380;
+const leafMesh = new THREE.InstancedMesh(leafGeometry(), new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.7 }), LEAVES);
+leafMesh.frustumCulled = false;
+scene.add(leafMesh);
+const SOGGY = ["#5a4632", "#6b5a3a", "#4a4030", "#3d3a2c"];
+const LEAF_COLS = [...MARDI, ...MARDI, ...COLORS];
+const leaves = [];
+const leafCol = new THREE.Color();
+const story = () => As + Bs;
+function respawnLeaf(L, i, anywhere) {
+  const cz = camera.position.z;
+  L.p.set((rnd() - 0.5) * 14, 0.3 + rnd() * (story() > 0.1 ? 9 : 1.5), anywhere ? cz + 3 - rnd() * 50 : cz - 30 - rnd() * 30);
+  L.v.set((rnd() - 0.5) * 0.5, 0, 2 + rnd() * 2);
+  leafMesh.setColorAt(i, leafCol.set(story() > 0.08 ? LEAF_COLS[Math.floor(rnd() * LEAF_COLS.length)] : SOGGY[Math.floor(rnd() * SOGGY.length)]));
+  if (leafMesh.instanceColor) leafMesh.instanceColor.needsUpdate = true;
+}
+for (let i = 0; i < LEAVES; i++) {
+  const L = { p: new THREE.Vector3(), v: new THREE.Vector3(), r: new THREE.Euler(rnd() * 6, rnd() * 6, rnd() * 6), w: new THREE.Vector3(rnd() - 0.5, rnd() - 0.5, rnd() - 0.5).multiplyScalar(5), s: 1.4 + rnd() * 1.2 };
+  leaves.push(L);
+}
+
+// confetti in the air once the second song is under way
+const CONFETTI = small ? 260 : 520;
+const confMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.14, 0.07), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }), CONFETTI);
+confMesh.frustumCulled = false;
+const confetti = [];
+for (let i = 0; i < CONFETTI; i++) {
+  confetti.push({ p: new THREE.Vector3((rnd() - 0.5) * 16, rnd() * 18, 6 - rnd() * 60), r: new THREE.Euler(rnd() * 6, rnd() * 6, 0), w: 2 + rnd() * 4, fall: 0.6 + rnd() * 0.8 });
+  confMesh.setColorAt(i, leafCol.set(COLORS[i % COLORS.length]));
+}
+confMesh.count = 0;
+scene.add(confMesh);
+
+// a low sunset sun over the bridge; tap it and the wind picks up
+const sunTex = printSunTextures();
+const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex.disc, transparent: true, depthWrite: false, fog: false, opacity: 0 }));
+sun.position.set(-34, 24, -300);
+sun.scale.setScalar(26);
+const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("rgba(255,190,90,1)", "rgba(255,140,60,0)"), transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+sunGlow.position.copy(sun.position).add(new THREE.Vector3(0, 0, -1));
+sunGlow.scale.setScalar(110);
+scene.add(sunGlow, sun);
 
 // ---------- rain ----------
 const RAIN = small ? 1000 : 2000;
@@ -398,12 +453,11 @@ canvas.addEventListener("pointermove", (e) => {
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   canvas.style.cursor = entered && pickPlace() >= 0 ? "pointer" : "";
 });
-let sunSpin = 0;
 canvas.addEventListener("click", (e) => {
   if (!entered) return;
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  if (sunDoodle.s.visible && ray.intersectObject(sunDoodle.s)[0]) { sunSpin = 6; return; } // tap the sun
+  if (sun.material.opacity > 0.3 && ray.intersectObject(sun)[0]) { gust = 1; return; } // tap the sun: a gust
   const i = pickPlace();
   if (i >= 0) play(i);
 });
@@ -421,7 +475,7 @@ addEventListener("keydown", (e) => {
 
 // ---------- entry ----------
 const gate = document.getElementById("gate");
-gate.querySelector("img").src = TEX.sun.image.toDataURL();
+gate.querySelector("img").src = sunTex.disc.image.toDataURL();
 gate.addEventListener("click", () => {
   if (entered) return;
   entered = true;
@@ -432,15 +486,16 @@ gate.addEventListener("click", () => {
 
 // ---------- loop ----------
 // A, B: how far each song has carried the city back (0..1). They only move forward.
-let A = 0, B = 0, As = 0, Bs = 0, bass = 0, high = 0;
+let A = 0, B = 0, As = 0, Bs = 0, bass = 0, high = 0, gust = 0;
 let walkZ = camBase.z;
 const lookNow = new THREE.Vector3(0, 8, walkZ - 50);
 const clock = new THREE.Clock();
+const mtx = new THREE.Matrix4(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
 const ease = (x) => 1 - Math.pow(1 - x, 3);
 const easeBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
-const fogRain = new THREE.Color("#8a909a"), fogClear = new THREE.Color("#cfe3f5");
-const hemiRain = new THREE.Color("#a8b0bc"), hemiClear = new THREE.Color("#d8ebff");
-const lampOff = new THREE.Color("#3b3a33"), lampOn = new THREE.Color("#ffe3a0");
+const fogRain = new THREE.Color("#8a909a"), fogClear = new THREE.Color("#c98e6a");
+const hemiRain = new THREE.Color("#a8b0bc"), hemiClear = new THREE.Color("#ffd8b0");
+const lampOff = new THREE.Color("#3b3a33"), lampOn = new THREE.Color("#ffd27a"), sunsetLight = new THREE.Color("#ffb46a");
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -454,7 +509,7 @@ function frame() {
   if (playing && current === 0) A = Math.max(A, progress);
   if (playing && current === 1) B = Math.max(B, progress);
   As += (A - As) * k(0.04); Bs += (B - Bs) * k(0.04);
-  const story = As + Bs; // 0..2
+  const storyNow = As + Bs; // 0..2
 
   // colour flows down the street with the first song, and reaches the bridge and sky with the second
   post.material.uniforms.uReach.value = 3 + ease(As) * 72 + ease(Bs) * 160;
@@ -466,7 +521,8 @@ function frame() {
   scene.fog.color.copy(fogRain).lerp(fogClear, clear);
   hemi.color.copy(hemiRain).lerp(hemiClear, clear);
   hemi.intensity = 0.9 + 0.5 * clear + 0.2 * As;
-  sunLight.intensity = 0.5 + 1.3 * clear;
+  sunLight.intensity = 0.5 + 1.1 * clear;
+  sunLight.color.set("#fff1dc").lerp(sunsetLight, clear);
   clouds.forEach((c) => {
     c.position.x += dt * c.userData.speed * (1 + clear * 3);
     if (c.position.x > 130) c.position.x = -130;
@@ -489,23 +545,65 @@ function frame() {
   }
 
   // street lamps glow in the gloom and go off as the sun comes
-  lamps.forEach((l) => l.bulb.color.copy(lampOff).lerp(lampOn, rainAmt * 0.8 + (1 - clear) * 0.2));
+  lamps.forEach((l) => l.bulb.color.copy(lampOff).lerp(lampOn, Math.min(1, rainAmt * 0.8 + clear * 0.9)));
 
-  // the drawings pop up at their moment and sway gently; the music only nudges them
-  doodles.forEach((d) => {
-    const on = d.t0 < 0 || story > d.t0 ? 1 : 0;
-    d.shown += (on - d.shown) * k(0.06);
-    const sc = d.t0 < 0 ? 1 : easeBack(Math.min(1, d.shown));
-    d.s.visible = d.shown > 0.01 || d.t0 < 0;
-    if (!d.s.visible) return;
-    d.s.scale.set(d.size * d.a * sc, d.size * sc, 1);
-    d.mat.rotation = d.spin + Math.sin(t * 0.9 + d.phase) * 0.06 * d.sway + bass * 0.03 * Math.sin(d.phase);
+  // paint spreads, beads and bunting go up, all at their moment in the story
+  painted.forEach((p) => { p.mat.uniforms.uReveal.value += ((storyNow > p.t0 ? 1 : 0) - p.mat.uniforms.uReveal.value) * k(0.015); });
+  strands.forEach((s) => {
+    s.shown += ((storyNow > s.t0 ? 1 : 0) - s.shown) * k(0.05);
+    s.g.scale.setScalar(Math.max(0.001, easeBack(Math.min(1, s.shown))));
+    s.g.rotation.x = Math.sin(t * 1.3 + s.phase) * 0.05 * (1 + bass * 0.5);
   });
-  sparkles.forEach((d) => d.s.scale.multiplyScalar(0.85 + 0.15 * Math.sin(t * 3 + d.phase) + high * 0.15));
-  // the drooping flower is the first to wake
-  if (As > 0.03 && sadOne.mat.map === TEX.sad) { sadOne.mat.map = TEX.pinkDaisy; sadOne.mat.needsUpdate = true; }
-  sunSpin *= Math.pow(0.95, dt * 60);
-  sunDoodle.spin += dt * (0.05 + sunSpin);
+  bunting.forEach((b) => {
+    b.shown += ((storyNow > b.t0 ? 1 : 0) - b.shown) * k(0.04);
+    b.m.scale.set(Math.max(0.001, Math.min(1, b.shown * 1.2)), Math.max(0.001, easeBack(Math.min(1, b.shown))), 1);
+    b.m.rotation.x = Math.sin(t * 1.7 + b.phase) * (0.08 + gust * 0.1);
+  });
+
+  // leaves: the wind blows down the street toward you, gusting; more of them as colour comes back
+  const alive = Math.min(1, storyNow / 1.2);
+  const activeLeaves = Math.floor(25 + (LEAVES - 25) * alive);
+  gust *= Math.pow(0.97, dt * 60);
+  const wind = (rainAmt > 0.5 ? 0.6 : 2.2 + Math.sin(t * 0.4) * 1.2 + Math.max(0, Math.sin(t * 0.13)) * 2.5) + gust * 6;
+  for (let i = 0; i < LEAVES; i++) {
+    const L = leaves[i];
+    if (i >= activeLeaves) { mtx.makeScale(0, 0, 0); leafMesh.setMatrixAt(i, mtx); continue; }
+    if (!L.live) { respawnLeaf(L, i, true); L.live = true; }
+    const p = L.p;
+    const heavy = rainAmt > 0.5;
+    L.v.z += (wind * (0.7 + 0.3 * Math.sin(i)) - L.v.z) * 0.03;
+    L.v.x += (Math.sin(t * 0.9 + i) * 0.8 - L.v.x) * 0.02;
+    L.v.y += ((heavy ? -0.6 : Math.sin(t * 1.4 + i * 0.7) * 0.9 - 0.25) - L.v.y) * 0.03;
+    p.addScaledVector(L.v, dt);
+    if (p.y < 0.22) { p.y = 0.22; L.v.y = Math.max(0, L.v.y); }
+    if (Math.abs(p.x) > FRONT - 0.3) L.v.x *= -1, p.x = Math.sign(p.x) * (FRONT - 0.3);
+    if (p.z > camera.position.z + 3 || p.y > 16) respawnLeaf(L, i, false);
+    const tumble = heavy ? 0.15 : 1;
+    L.r.x += L.w.x * dt * tumble; L.r.y += L.w.y * dt * tumble; L.r.z += L.w.z * dt * tumble;
+    quat.setFromEuler(L.r);
+    mtx.compose(p, quat, scl.setScalar(L.s));
+    leafMesh.setMatrixAt(i, mtx);
+  }
+  leafMesh.instanceMatrix.needsUpdate = true;
+
+  // confetti drifts down through the second song
+  confMesh.count = Math.floor(CONFETTI * THREE.MathUtils.smoothstep(Bs, 0.25, 0.9));
+  for (let i = 0; i < confMesh.count; i++) {
+    const c = confetti[i];
+    c.p.y -= dt * c.fall;
+    c.p.z += dt * wind * 0.25;
+    c.p.x += Math.sin(t * 2 + i) * dt * 0.6;
+    if (c.p.y < 0 || c.p.z > camera.position.z + 2) c.p.set((rnd() - 0.5) * 16, 10 + rnd() * 10, camera.position.z - 4 - rnd() * 50);
+    c.r.x += dt * c.w; c.r.y += dt * c.w * 0.7;
+    quat.setFromEuler(c.r);
+    mtx.compose(c.p, quat, scl.setScalar(1.6));
+    confMesh.setMatrixAt(i, mtx);
+  }
+  confMesh.instanceMatrix.needsUpdate = true;
+
+  // the sunset sun
+  sun.material.opacity = THREE.MathUtils.smoothstep(Bs, 0.15, 0.6);
+  sunGlow.material.opacity = sun.material.opacity * (0.75 + bass * 0.1);
 
   // places: the door and the bridge arch light up while their song plays
   places.forEach((p, i) => { p.glow += ((i === current && playing ? 1 : 0) - p.glow) * k(0.04); });

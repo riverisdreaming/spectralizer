@@ -38,15 +38,18 @@ above has its own copy.
 
 ## What the site is (city version, latest)
 
-A rainy grey city street (Dumbo-style brick warehouses, fire escapes, parked cars,
-a blue suspension bridge at the end) that the two songs bring back to life.
-Song 1 (`doordash`) returns colour down the street, stops the rain and grows
-hand-drawn smiling flowers along the sidewalks and walls; its place is a
-brownstone front door. Song 2 (`wardoggin`) carries colour to the bridge and
-sky: blue sky, drawn sun, rainbow, sparkles, and a huge smiling daisy on the
-bridge; its place is the bridge arch. Style: near-photographic city with bold,
-flat, ink-outlined doodle characters on top, after the artist's Dumbo
-street-art reference. Music reactions stay subtle.
+A rainy grey city street (Dumbo-style brick warehouses, fire escapes, parked
+cars, a suspension bridge at the end) that the two songs bring back to life with
+colour. Song 1 (`doordash`): colour returns down the street, the rain stops,
+bold murals spread across the brick, paint splashes hit the road, Mardi Gras
+beads and bunting go up, coloured leaves gust through; its place is a brownstone
+front door. Song 2 (`wardoggin`): the bridge towers are painted, confetti fills
+the air, the sky becomes a purple-and-gold sunset; its place is the bridge arch.
+
+The artist wants colour itself to carry it: Mardi Gras purple/gold/green plus
+crimson, burnt orange, teal, electric blue, describing a vibrant personality,
+and kept masculine (bold, graphic). No flowers or cute smiling characters any
+more. Music reactions stay subtle.
 
 Earlier versions (black-and-chrome mockups, the meadow that heals from a storm,
 then from fire) are in git history; the artist has moved on from them.

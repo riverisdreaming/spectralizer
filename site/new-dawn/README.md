@@ -4,18 +4,20 @@ A city street that two songs bring back to life.
 
 It opens in the rain: a long street of grey brick warehouses with fire escapes,
 parked cars and lamps glowing in the gloom, and a steel bridge closing the far
-end. One drooping flower sits by the kerb. Every visit starts this way.
+end. A few soggy leaves lie in the gutter. Every visit starts this way.
 
 - **The first song (`doordash`)** brings colour back down the street from where
-  you stand. The rain stops, the drooping flower wakes up, and hand-drawn flowers,
-  leaves, ribbons and smiling faces pop up along the sidewalks and climb the walls.
+  you stand. The rain stops, paint spreads across the brick in bold murals,
+  paint splashes hit the street, Mardi Gras beads drape from the fire escapes
+  and lamps, bunting goes up across the street, and coloured leaves gust through.
   You walk the street as it plays.
 - **The second song (`wardoggin`)** carries the colour to the bridge and the sky.
-  The clouds clear to blue, a drawn sun and rainbow arrive, sparkles and birds
-  fill the air, and the biggest smiling daisy blooms on the bridge.
+  The bridge towers get painted, confetti fills the air, and the sky turns into
+  a purple-and-gold sunset as the lamps come on.
 
-The look merges a near-photographic city with bold hand-drawn characters (flat
-colour, thick ink outlines, happy faces), after a Dumbo street-art reference.
+The palette leads with Mardi Gras purple, gold and green, backed by crimson,
+burnt orange, teal and electric blue: one person's colourful personality, kept
+bold and graphic rather than cute.
 Progress follows how far each song has played and never goes backwards.
 
 The only interface is one printed strip at the foot of the page. No song names
@@ -32,16 +34,15 @@ appear anywhere.
 
 ## The music breathes through it
 
-The city coming back tells the story; the music only moves it gently. The
-drawings sway a little with the bass, sparkles twinkle with the highs, and the
-lit doorway breathes.
+The city coming back tells the story; the music only moves it gently. The beads
+sway a little with the bass and the lit doorway breathes.
 
 ## Hidden in the world
 
 - A delivery bag waits on the stoop once the street has its colour.
 - When its song is quiet, the front door blinks D O O R in Morse code.
-- A little brown dog in a helmet peeks out of the grass under the bridge.
-- Tap the drawn sun.
+- A spray-paint stencil of a dog in a gold helmet appears on a wall near the bridge.
+- Tap the sunset sun and the wind picks up.
 
 ## Run it
 
@@ -63,9 +64,9 @@ The engraved typeface comes from Google Fonts and falls back to Georgia.
 | Path | What it is |
 | --- | --- |
 | `index.html` | Page shell, player strip and entry styles |
-| `main.js` | The scene: rain, colour returning, drawings, walk, audio, player strip, finishing pass |
+| `main.js` | The scene: rain, colour returning, murals, beads, leaves, confetti, walk, audio, player strip, finishing pass |
 | `city.js` | Buildings, fire escapes, street, cars, lamps, stoop, bridge, skyline |
-| `doodles.js` | The hand-drawn characters, drawn on canvas: daisies, tulips, leaves, sun, rainbow, sparkles, singer, ladybug, dog |
+| `color.js` | Murals, paint splashes, the dog stencil, the spreading-paint shader, bead strands, bunting |
 | `assets.js` | Shared pieces (toon shader, clouds, parcel); also the earlier meadow models |
 | `music/` | `doordash.mp3`, `wardoggin.mp3` |
 | `imagery/`, `models/` | Stills and `.glb` files from the earlier meadow version; not yet redone for the city |
