@@ -36,12 +36,15 @@ appear anywhere.
 
 ## Run it
 
-Module scripts need a server:
+Module scripts need a server, and seeking needs one that supports range requests
+(Python's `http.server` does not, so the scrubber would snap back to the start):
 
 ```sh
-cd site && python3 -m http.server 8765
-# open http://localhost:8765/new-dawn/
+npx serve site
+# open http://localhost:3000/new-dawn/
 ```
+
+Song files are gitignored. Copy `doordash.mp3` and `wardoggin.mp3` into `music/` first.
 
 Three.js 0.160.0 is vendored in `vendor/`, so nothing loads from a CDN.
 The engraved typeface comes from Google Fonts and falls back to Georgia.
