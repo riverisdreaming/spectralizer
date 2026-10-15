@@ -36,41 +36,20 @@ don't land in a repo that may be public. You need the two files from the artist:
 `doordash.mp3` (about 3:30) and `wardoggin.mp3` (about 3:01). The live preview
 above has its own copy.
 
-## What the site is
+## What the site is (city version, latest)
 
-A screen-printed 3D landscape (Three.js 0.160.0, vendored in `vendor/`, no CDN).
-The story is a redemption: the music rebuilds a burnt world.
+A rainy grey city street (Dumbo-style brick warehouses, fire escapes, parked cars,
+a blue suspension bridge at the end) that the two songs bring back to life.
+Song 1 (`doordash`) returns colour down the street, stops the rain and grows
+hand-drawn smiling flowers along the sidewalks and walls; its place is a
+brownstone front door. Song 2 (`wardoggin`) carries colour to the bridge and
+sky: blue sky, drawn sun, rainbow, sparkles, and a huge smiling daisy on the
+bridge; its place is the bridge arch. Style: near-photographic city with bold,
+flat, ink-outlined doodle characters on top, after the artist's Dumbo
+street-art reference. Music reactions stay subtle.
 
-- **Start (every visit):** the meadow is on fire, the sky is blood-orange under
-  low smoke, the grass is burnt stubble, and both buildings lie in rubble with
-  smoke rising from them.
-- **Song 1, `doordash`:** the stone gate over the path rebuilds block by block
-  as the song progresses. The flames go out outward from the viewer, the grass
-  grows back, the sky settles to a smoky dusk. The camera walks the path and
-  passes through the finished gate at the end.
-- **Song 2, `wardoggin`:** the camera turns to the far hill and the tower
-  rebuilds from its ruins (the stone dog is placed last). The smoke lifts, the
-  sky clears to ultramarine, the sun rises, cloud streaks fan out of it,
-  poppies open, and a faint rainbow appears.
-- Rebuild is driven by each song's playback progress and only moves forward.
-
-## Direction from the artist (keep to this)
-
-- The **rebuilding tells the story**. Music reactions are deliberately subtle
-  (flames and cloud streaks sway slightly with the spectrum, sun and doorway
-  breathe with the bass, soft gusts on kicks). Don't make them louder.
-- **No song names anywhere on the page.** Songs are chosen with the gate and
-  tower silhouettes in the player strip, or by clicking the buildings.
-- Art style: screen print / woodblock. Deep ultramarine sky, white cumulus with
-  blue shading, rich greens, red poppies, pale winding path, ink outlines,
-  stipple grain. References were Kawase Hasui-like landscape prints.
-- Previously rejected, don't bring back: black-and-chrome look, Murakami
-  flowers, butterflies, the compass dial, paw prints, pastel/Easter colours.
-- Hidden references to the song titles are wanted. Current ones: a delivery
-  bag on the gate's doorstep (appears once the gate stands), the gate doorway
-  blinking D-O-O-R in Morse when its song is quiet, the stone war dog at the
-  tower whose eyes glow while its song plays, and a sun that bursts when tapped.
-  The artist may send lyric lines to hide more; none received yet.
+Earlier versions (black-and-chrome mockups, the meadow that heals from a storm,
+then from fire) are in git history; the artist has moved on from them.
 
 ## Controls
 

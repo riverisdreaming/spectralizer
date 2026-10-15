@@ -4,9 +4,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap">
 <style>
-/* Layout: a full-bleed printed landscape as backdrop; one printed player strip at the foot is the only interface. */
+/* Layout: a full-bleed city street as backdrop; one printed player strip at the foot is the only interface. */
 :root {
-  --ultramarine: #0b1f8f;
+  --ultramarine: #2c5fb8;
   --paper: #f4ead2;
   --ink: #0a1033;
   --ember: #ff7a1a;
@@ -156,11 +156,11 @@ input[type="range"]:focus-visible { outline: 2px solid var(--ultramarine); outli
 <canvas id="world"></canvas>
 <div id="player" role="group" aria-label="Music">
   <div class="places">
-    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the gate">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 22V6h18v16h-5v-8a4 4 0 0 0-8 0v8z" fill="currentColor"/><path class="door" d="M9 22v-8a3 3 0 0 1 6 0v8z" fill="none"/><rect x="2" y="3" width="20" height="2.5" fill="currentColor"/></svg>
+    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the front door">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V9a6 6 0 0 1 12 0v11z" fill="currentColor"/><path class="door" d="M8.5 20V9.6a3.5 3.5 0 0 1 7 0V20z" fill="#f4ead2"/><path d="M3 23h18v-1.5H3zM4.5 21.5h15V20h-15z" fill="currentColor"/></svg>
     </button>
-    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the tower">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 22V4h8v18zM7 2h10v2H7z" fill="currentColor"/><path class="door" d="M10.6 21V9.5a1.4 1.4 0 0 1 2.8 0V21z" fill="#f4ead2"/><path d="M4 22l3-4h10l3 4z" fill="currentColor"/></svg>
+    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the bridge">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 22V3h2.5v19zM14.5 22V3H17v19zM7 8h10v1.6H7zM9.5 14h5a2.5 2.5 0 0 0-5 0z" fill="currentColor"/><path class="door" d="M9.5 22v-8a2.5 2.5 0 0 1 5 0v8z" fill="#f4ead2"/><path d="M1 15h22v2H1zM1 15C4 7 6 5 8 3.5M23 15C20 7 18 5 16 3.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1 15h22v2H1z" fill="currentColor"/></svg>
     </button>
   </div>
   <button id="pp" type="button" aria-label="Play">

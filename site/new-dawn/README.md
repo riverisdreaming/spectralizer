@@ -1,50 +1,47 @@
 # New Dawn
 
-A living, screen-printed landscape for two songs, and the music rebuilds it.
+A city street that two songs bring back to life.
 
-It opens on fire: flames across the meadow, a blood-orange sky under low smoke,
-burnt stubble, and both buildings lying in crushed rubble with smoke rising off
-them. Every visit starts this way.
+It opens in the rain: a long street of grey brick warehouses with fire escapes,
+parked cars and lamps glowing in the gloom, and a steel bridge closing the far
+end. One drooping flower sits by the kerb. Every visit starts this way.
 
-- **The first song (`doordash`)** rebuilds the stone gate block by block from its
-  rubble, lowest courses first. The flames go out from where you stand outward,
-  the grass grows back green, and the sky settles into a smoky dusk. You walk the
-  path as it plays and pass through the finished gate as it ends.
-- **The second song (`wardoggin`)** rebuilds the tower on the far hill, with the
-  stone war dog set in place last. The smoke lifts, the sky clears to ultramarine,
-  the sun rises, cloud streaks fan out of it, poppies open, and a faint rainbow
-  comes through. When it ends, the whole scene is restored.
+- **The first song (`doordash`)** brings colour back down the street from where
+  you stand. The rain stops, the drooping flower wakes up, and hand-drawn flowers,
+  leaves, ribbons and smiling faces pop up along the sidewalks and climb the walls.
+  You walk the street as it plays.
+- **The second song (`wardoggin`)** carries the colour to the bridge and the sky.
+  The clouds clear to blue, a drawn sun and rainbow arrive, sparkles and birds
+  fill the air, and the biggest smiling daisy blooms on the bridge.
 
-Rebuilding follows how far each song has played and never goes backwards.
+The look merges a near-photographic city with bold hand-drawn characters (flat
+colour, thick ink outlines, happy faces), after a Dumbo street-art reference.
+Progress follows how far each song has played and never goes backwards.
 
 The only interface is one printed strip at the foot of the page. No song names
 appear anywhere.
 
-- Each song lives in a place: the stone gate over the path (`doordash`) and the
-  tower on the far hill (`wardoggin`). Pick one with its silhouette in the strip,
-  or click the place itself in the world. Its doorway fills with light.
+- Each song lives in a place: the brownstone front door (`doordash`) and the
+  bridge (`wardoggin`). Pick one with its icon in the strip, or click the place
+  itself. The doorway or the bridge arch fills with light.
 - The scrubber is a horizon line with the sun as its handle. Drag it to move
   through the song. Volume sits beside it and is remembered.
 - Keys: Space plays or pauses, Left/Right skip 5 seconds, Up/Down change the
   volume, 1 and 2 pick a place.
-- While a song plays you walk the path toward its place. By the end of
-  `doordash` you have walked through the gate.
+- While a song plays you walk down the street toward the bridge.
 
 ## The music breathes through it
 
-The rebuild tells the story; the music only moves the world gently. The flames,
-and later the cloud streaks fanning out of the sun, sway a little with their
-slice of the spectrum. The sun's rays and the lit doorway breathe with the bass,
-and kicks send a soft gust through the meadow. Moving the pointer pushes wind
-through the grass and leaves.
+The city coming back tells the story; the music only moves it gently. The
+drawings sway a little with the bass, sparkles twinkle with the highs, and the
+lit doorway breathes.
 
 ## Hidden in the world
 
-- A delivery bag sits on the gate's doorstep.
-- When its song is quiet, the gate's doorway blinks D O O R in Morse code.
-- A stone war dog guards the foot of the tower. Its eyes kindle while its song plays.
-- The delivery only arrives once the gate is standing again.
-- Tap the sun.
+- A delivery bag waits on the stoop once the street has its colour.
+- When its song is quiet, the front door blinks D O O R in Morse code.
+- A little brown dog in a helmet peeks out of the grass under the bridge.
+- Tap the drawn sun.
 
 ## Run it
 
@@ -66,11 +63,12 @@ The engraved typeface comes from Google Fonts and falls back to Georgia.
 | Path | What it is |
 | --- | --- |
 | `index.html` | Page shell, player strip and entry styles |
-| `main.js` | The world: fire, smoke, sky, meadow, rebuild, wind, audio, player strip, visualizer, print pass |
-| `assets.js` | Every 3D model, built in code: gate and tower (as rebuildable stone pieces), dog, parcel, clouds, sun, grass, poppies, leaves, rainbow |
+| `main.js` | The scene: rain, colour returning, drawings, walk, audio, player strip, finishing pass |
+| `city.js` | Buildings, fire escapes, street, cars, lamps, stoop, bridge, skyline |
+| `doodles.js` | The hand-drawn characters, drawn on canvas: daisies, tulips, leaves, sun, rainbow, sparkles, singer, ladybug, dog |
+| `assets.js` | Shared pieces (toon shader, clouds, parcel); also the earlier meadow models |
 | `music/` | `doordash.mp3`, `wardoggin.mp3` |
-| `models/` | The models exported as `.glb` for use in Blender or elsewhere |
-| `imagery/` | Poster stills (on fire, gate rebuilt, restored) at 1920x1080 and 1080x1920, plus a 1200x630 share card |
+| `imagery/`, `models/` | Stills and `.glb` files from the earlier meadow version; not yet redone for the city |
 | `tools/` | `export.html` + `export-models.js` regenerate `models/`; `posters.js` regenerates `imagery/` |
 
 The `.glb` files carry flat colours. The toon shading and the print pass
