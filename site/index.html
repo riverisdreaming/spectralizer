@@ -1,0 +1,185 @@
+<title>Void Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Geist+Mono:wght@300;400;500&display=swap">
+<style>
+/* Layout: one narrow column floating in black, like a spec sheet left inside an empty gallery. */
+:root {
+  --void: #050506;
+  --plate: #0d0e10;
+  --line: #1f2125;
+  --chrome: #e9ebef;
+  --steel: #8d929b;
+  --dim: #5a5e66;
+  --display: "Michroma", "Eurostile", "Arial Black", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--void); color: var(--steel); }
+body {
+  font: 300 14px/1.7 var(--mono);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 96px;
+}
+main { max-width: 760px; margin: 0 auto; display: grid; gap: 88px; }
+
+header { padding-top: 96px; display: grid; gap: 22px; }
+.eyebrow { font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--dim); }
+h1 {
+  font: 400 clamp(30px, 7vw, 56px)/1.05 var(--display);
+  letter-spacing: 0.02em;
+  margin: 0;
+  text-wrap: balance;
+  background: linear-gradient(176deg, #ffffff 0%, #b9bec6 38%, #3c3f45 52%, #d9dde3 64%, #7a7f88 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lede { max-width: 62ch; margin: 0; color: var(--steel); }
+.lede strong { color: var(--chrome); font-weight: 400; }
+
+h2 { font: 400 13px/1.3 var(--display); letter-spacing: 0.2em; text-transform: uppercase; color: var(--chrome); margin: 0; }
+section { display: grid; gap: 28px; }
+section > p { margin: 0; max-width: 62ch; }
+
+.mocks { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.mock {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 24px;
+  padding: 28px;
+  background: var(--plate);
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.4s ease;
+}
+.mock:hover, .mock:focus-visible { background: #131417; outline: none; }
+.mock:focus-visible { box-shadow: inset 0 0 0 1px var(--steel); }
+.mock h3 { font: 400 17px/1.2 var(--display); letter-spacing: 0.08em; color: var(--chrome); margin: 0; }
+.mock .from { font-size: 11px; color: var(--dim); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 10px; }
+.mock .body { display: grid; gap: 10px; min-width: 0; }
+.mock p { margin: 0; }
+.mock .how { color: var(--chrome); font-size: 12.5px; }
+.mock .how::before { content: "\2192\00a0"; color: var(--dim); }
+.enter { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--dim); }
+.mock:hover .enter { color: var(--chrome); }
+
+.ideas { display: grid; gap: 22px; margin: 0; padding: 0; list-style: none; }
+.ideas li { display: grid; grid-template-columns: 9.5rem 1fr; gap: 24px; }
+.ideas b { font: 400 12px/1.6 var(--display); letter-spacing: 0.1em; color: var(--chrome); }
+.ideas span { min-width: 0; }
+
+.refs { width: 100%; border-collapse: collapse; font-size: 13px; }
+.refs-wrap { overflow-x: auto; }
+.refs th { text-align: left; font-weight: 400; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); padding: 0 16px 12px 0; }
+.refs td { padding: 14px 16px 14px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.refs td:first-child { color: var(--chrome); white-space: nowrap; }
+
+ol.q { margin: 0; padding-left: 1.6em; display: grid; gap: 16px; max-width: 64ch; }
+ol.q li::marker { color: var(--dim); font-size: 12px; }
+ol.q strong { color: var(--chrome); font-weight: 400; }
+
+.note { border-left: 1px solid var(--line); padding-left: 18px; color: var(--dim); font-size: 12.5px; max-width: 62ch; margin: 0; }
+
+@media (max-width: 560px) {
+  header { padding-top: 64px; }
+  .mock, .ideas li { grid-template-columns: 1fr; gap: 12px; padding: 22px; }
+  .ideas li { padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .mock { transition: none; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Working file &middot; not part of the site</div>
+    <h1>Four ways into the void</h1>
+    <p class="lede">Every mockup follows the same rules: <strong>black and chrome, no header, no footer, no name, no links.</strong> A visitor sees a single point of light. Touching it starts the music. After that the only things on screen are the object and the sound. The songs here are synthesized placeholders. Your real tracks drop into one config file.</p>
+  </header>
+
+  <section aria-labelledby="h-mocks">
+    <h2 id="h-mocks">Playable mockups</h2>
+    <div class="mocks">
+      <a class="mock" href="mercury.html">
+        <div><h3>Mercury</h3><div class="from">After the paper plane</div></div>
+        <div class="body">
+          <p>One object of liquid chrome hangs in the dark. Each song has its own form: a breathing blob, a twisted ribbon, a soft crystal, a falling drop, a lattice. The surface shivers with the bass.</p>
+          <p class="how">Drag to turn it. Flick it hard and it stretches, melts, and reforms as the next song.</p>
+          <span class="enter">Enter</span>
+        </div>
+      </a>
+      <a class="mock" href="prism.html">
+        <div><h3>Prism</h3><div class="from">After the esc keycap</div></div>
+        <div class="body">
+          <p>A glass keycap with one face per song. Light splits into colour as it passes through, and the glass glows from inside on every kick.</p>
+          <p class="how">Spin it with a drag, the wheel or the arrow keys. The face that comes to rest toward you is the song that plays.</p>
+          <span class="enter">Enter</span>
+        </div>
+      </a>
+      <a class="mock" href="frequency.html">
+        <div><h3>Frequency</h3><div class="from">After pirate radio</div></div>
+        <div class="body">
+          <p>A single chrome wire across an empty screen, buried in static. The songs are stations hidden at uneven points on a dial nobody labels. When you land on one, the hiss drops away and the wire becomes the song's waveform.</p>
+          <p class="how">Drag sideways or scroll to tune. Between stations you hear both songs bleed into each other.</p>
+          <span class="enter">Enter</span>
+        </div>
+      </a>
+      <a class="mock" href="darkroom.html">
+        <div><h3>Darkroom</h3><div class="from">After a museum at night</div></div>
+        <div class="body">
+          <p>The room is pitch black and the cursor is the only light. Chrome spheres hang somewhere in it, one per song, visible only when your light catches them. Leave the mouse alone and the light starts to wander by itself.</p>
+          <p class="how">Search with the cursor or your finger. Touch a sphere and it drifts toward you and plays.</p>
+          <span class="enter">Enter</span>
+        </div>
+      </a>
+    </div>
+    <p class="note">Each mockup has a faint &times; in the corner (or press Esc) to come back here. That mark exists only for reviewing. On the real site it goes away.</p>
+  </section>
+
+  <section aria-labelledby="h-ideas">
+    <h2 id="h-ideas">Ideas on paper</h2>
+    <p>Not built yet. Any of these can be layered on top of whichever mockup you pick.</p>
+    <ul class="ideas">
+      <li><b>Paper plane</b><span>Your chrome plane glides through the void. Throw it and it lands somewhere new; where it lands decides the song. A direct use of your reference image.</span></li>
+      <li><b>Hours</b><span>The site behaves differently by the visitor's local time. Daylight shows a closed chrome shutter with one song. After midnight the full set opens. People share the rumour, not a link.</span></li>
+      <li><b>Return visits</b><span>The first visit gives one random song. Each time someone comes back, another one surfaces. Nothing explains this; regulars notice.</span></li>
+      <li><b>Mirror</b><span>With camera permission, the visitor's own face appears faintly warped in the chrome. You never show yourself; they see themselves instead.</span></li>
+      <li><b>Hidden door</b><span>One secret way to reach you, only if you want it: typing a word, holding the object still for a full song, or a frequency off the end of the dial. Nothing on screen hints at it.</span></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-refs">
+    <h2 id="h-refs">What I studied</h2>
+    <p>Websites and campaigns people often call art, and the one thing worth taking from each.</p>
+    <div class="refs-wrap">
+      <table class="refs">
+        <thead><tr><th scope="col">Reference</th><th scope="col">What to take</th></tr></thead>
+        <tbody>
+          <tr><td>Igloo Inc</td><td>Awwwards Site of the Year 2024. Cold, crystalline 3D with almost no interface. Material and light carry the whole experience. Used in Prism.</td></tr>
+          <tr><td>Lusion</td><td>Liquid, physical WebGL where things respond like real matter when touched. The feel behind Mercury.</td></tr>
+          <tr><td>Bruno Simon</td><td>A portfolio you drive through with a toy car. You learn the site by playing, with no instructions. That is the model for song switching here.</td></tr>
+          <tr><td>Radiohead, Kid A Mnesia</td><td>An album as a dark building you wander through. Discovery is the reward. The source for Darkroom.</td></tr>
+          <tr><td>Arcade Fire, The Wilderness Downtown</td><td>Chris Milk's interactive film that used each visitor's own childhood street. Personal and slightly unsettling. Behind the Mirror idea.</td></tr>
+          <tr><td>Björk, Biophilia</td><td>Each song gets its own world and its own way to touch it. Mercury and Prism both give every song a distinct form.</td></tr>
+          <tr><td>Aphex Twin, Syro</td><td>A green blimp over London and an announcement on the dark web. Mystery as the whole campaign. Behind Frequency and Hidden Door.</td></tr>
+          <tr><td>Burial, early The Weeknd</td><td>Years of great music with no face attached. People went looking, and the looking built the following.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-q">
+    <h2 id="h-q">Questions for you</h2>
+    <ol class="q">
+      <li><strong>Which mockup pulls you in?</strong> Pick one, or name parts of two to combine (for example, Darkroom's search ending in a Mercury object).</li>
+      <li><strong>How many songs, and in what form?</strong> Finished masters (mp3 or wav), and is it a fixed set or will you add songs over time?</li>
+      <li><strong>Should song titles ever appear?</strong> Right now only a faint Roman numeral surfaces for two seconds on each change. It could be the title, or nothing at all.</li>
+      <li><strong>Do you want one hidden door?</strong> You said no clues. Should there still be one secret way to reach you that only the obsessive find, or truly none?</li>
+      <li><strong>What name or mark, if any, goes in the browser tab and the link preview?</strong> These mockups use a blank title. When shared, the preview card is all a stranger sees.</li>
+      <li><strong>Do you have a domain?</strong> A strange domain is itself a clue, or the lack of one. I can suggest options.</li>
+      <li><strong>Should the paper plane and keycap become the actual objects?</strong> I can model them properly in 3D, or you can send me model files if you have them.</li>
+    </ol>
+  </section>
+</main>
