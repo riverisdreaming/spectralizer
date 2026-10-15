@@ -1,9 +1,21 @@
 # New Dawn
 
-A living, screen-printed landscape for two songs. It opens in a rainstorm: grey sky,
-dry grass, dull stone. The music heals it. Colour spreads outward from where you
-stand, the rain stops, the clouds part into streaks fanning out of a low sun, and a
-faint rainbow comes through. Returning visitors find the world partly healed.
+A living, screen-printed landscape for two songs, and the music rebuilds it.
+
+It opens on fire: flames across the meadow, a blood-orange sky under low smoke,
+burnt stubble, and both buildings lying in crushed rubble with smoke rising off
+them. Every visit starts this way.
+
+- **The first song (`doordash`)** rebuilds the stone gate block by block from its
+  rubble, lowest courses first. The flames go out from where you stand outward,
+  the grass grows back green, and the sky settles into a smoky dusk. You walk the
+  path as it plays and pass through the finished gate as it ends.
+- **The second song (`wardoggin`)** rebuilds the tower on the far hill, with the
+  stone war dog set in place last. The smoke lifts, the sky clears to ultramarine,
+  the sun rises, cloud streaks fan out of it, poppies open, and a faint rainbow
+  comes through. When it ends, the whole scene is restored.
+
+Rebuilding follows how far each song has played and never goes backwards.
 
 The only interface is one printed strip at the foot of the page. No song names
 appear anywhere.
@@ -20,8 +32,10 @@ appear anywhere.
 
 ## The music drives the page
 
-- The twelve cloud streaks fanning out of the sun are a spectrum, from low on
-  the left to high on the right. Each swells and warms as its band gets loud.
+- While it burns, the flames are the visualizer: each one leaps with its slice
+  of the spectrum, low frequencies on the left, highs on the right.
+- Once the sky clears, the twelve cloud streaks fanning out of the sun take over
+  as the spectrum. Each swells and warms as its band gets loud.
 - The sun's rays pulse with the bass. Kicks flash the whole print warmer and send
   a gust and petals through the meadow. The ponds shimmer with the highs.
 - Pointer movement pushes wind through the grass and leaves.
@@ -32,6 +46,7 @@ appear anywhere.
 - When its song is quiet, the gate's doorway blinks D O O R in Morse code.
 - A stone war dog guards the foot of the tower. Its eyes kindle while its song plays.
 - Paw prints press into the path, one by one, as `wardoggin` plays.
+- The delivery only arrives once the gate is standing again.
 - Tap the sun.
 
 ## Run it
@@ -54,11 +69,11 @@ The engraved typeface comes from Google Fonts and falls back to Georgia.
 | Path | What it is |
 | --- | --- |
 | `index.html` | Page shell, player strip and entry styles |
-| `main.js` | The world: sky, storm, meadow, wind, audio, player strip, visualizer, print pass |
-| `assets.js` | Every 3D model, built in code: gate, tower, dog, parcel, paw prints, clouds, sun, grass, poppies, leaves, rainbow |
+| `main.js` | The world: fire, smoke, sky, meadow, rebuild, wind, audio, player strip, visualizer, print pass |
+| `assets.js` | Every 3D model, built in code: gate and tower (as rebuildable stone pieces), dog, parcel, paw prints, clouds, sun, grass, poppies, leaves, rainbow |
 | `music/` | `doordash.mp3`, `wardoggin.mp3` |
 | `models/` | The models exported as `.glb` for use in Blender or elsewhere |
-| `imagery/` | Poster stills at 1920x1080, 1080x1920 and a 1200x630 share card |
+| `imagery/` | Poster stills (on fire, gate rebuilt, restored) at 1920x1080 and 1080x1920, plus a 1200x630 share card |
 | `tools/` | `export.html` + `export-models.js` regenerate `models/`; `posters.js` regenerates `imagery/` |
 
 The `.glb` files carry flat colours. The toon shading and the print pass

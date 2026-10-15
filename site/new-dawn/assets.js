@@ -274,28 +274,67 @@ function box(w, h, d, mat, x, y, z) {
   return m;
 }
 
-// A weathered stone gate standing over the path.
+// ---------- ruin and rebuild ----------
+// Every landmark is a set of stone pieces. Each piece knows where it stands when built and
+// where it lies in the rubble; rebuild(t) lifts them back into place, lowest courses first.
+function rebuildable(root, pieces, { radius, ground, lift, seed }) {
+  const rnd = mulberry(seed);
+  const size = new THREE.Vector3();
+  const items = pieces.map((m) => {
+    new THREE.Box3().setFromObject(m).getSize(size);
+    const builtP = m.position.clone(), builtQ = m.quaternion.clone();
+    // topple it: long side down, spun at random, half sunk into the ground
+    const a = rnd() * Math.PI * 2, r = radius * Math.sqrt(rnd());
+    const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.8;
+    const tall = size.y > Math.max(size.x, size.z);
+    const e = new THREE.Euler(tall ? (rnd() < 0.5 ? 1 : -1) * (Math.PI / 2 + (rnd() - 0.5) * 0.4) : (rnd() - 0.5) * 0.6, rnd() * Math.PI * 2, (rnd() - 0.5) * 0.5);
+    const lying = tall ? Math.min(size.x, size.z) : size.y;
+    const ruinP = new THREE.Vector3(x, ground(x, z) + lying * 0.35 + rnd() * 0.3, z);
+    return { m, builtP, builtQ, ruinP, ruinQ: new THREE.Quaternion().setFromEuler(e), y: builtP.y };
+  });
+  items.sort((p, q) => p.y - q.y);
+  const span = 0.22;
+  const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  return function rebuild(t) {
+    items.forEach((it, k) => {
+      const start = (k / items.length) * (1 - span);
+      const e = ease(Math.min(1, Math.max(0, (t - start) / span)));
+      it.m.position.lerpVectors(it.ruinP, it.builtP, e);
+      it.m.position.y += Math.sin(e * Math.PI) * lift;
+      it.m.quaternion.slerpQuaternions(it.ruinQ, it.builtQ, e);
+    });
+  };
+}
+
+// A weathered stone gate standing over the path, built in courses so it can be rebuilt.
 export function makeGate() {
   const root = new THREE.Group();
   root.name = "gate";
   const stone = toonMaterial({ ...STONE, light: new THREE.Vector3(-0.5, 0.7, 0.6) });
-  root.add(
-    box(1.0, 5.2, 1.0, stone, -1.55, 2.6, 0), box(1.0, 5.2, 1.0, stone, 1.55, 2.6, 0),
-    box(1.25, 0.35, 1.25, stone, -1.55, 0.17, 0), box(1.25, 0.35, 1.25, stone, 1.55, 0.17, 0),
-    box(4.4, 0.9, 1.15, stone, 0, 5.6, 0), box(4.8, 0.25, 1.3, stone, 0, 6.15, 0), box(3.2, 0.5, 0.9, stone, 0, 6.5, 0)
-  );
+  const pieces = [];
+  const add = (m) => { root.add(m); pieces.push(m); return m; };
+  [-1.55, 1.55].forEach((x) => {
+    add(box(1.25, 0.35, 1.25, stone, x, 0.17, 0));
+    for (let j = 0; j < 5; j++) add(box(1.0, 1.0, 1.0, stone, x, 0.35 + 0.5 + j * 1.0 + (j ? 0.01 * j : 0), 0));
+  });
   // the arch panel between the pillars
   const panel = new THREE.Shape();
   panel.moveTo(-1.05, 3.0); panel.lineTo(-1.05, 5.15); panel.lineTo(1.05, 5.15); panel.lineTo(1.05, 3.0);
   panel.absarc(0, 3.0, 1.05, 0, Math.PI, false);
   const pg = new THREE.ExtrudeGeometry(panel, { depth: 0.8, bevelEnabled: false, curveSegments: 24 });
-  pg.translate(0, 0, -0.4);
-  root.add(new THREE.Mesh(pg, stone));
+  pg.translate(0, -4.1, -0.4);
+  const arch = add(new THREE.Mesh(pg, stone));
+  arch.position.y = 4.1;
+  add(box(4.4, 0.9, 1.15, stone, 0, 5.6, 0));
+  add(box(4.8, 0.25, 1.3, stone, 0, 6.15, 0));
+  add(box(3.2, 0.5, 0.9, stone, 0, 6.5, 0));
   const light = doorLightMaterial();
   const door = new THREE.Mesh(new THREE.ShapeGeometry(archShape(2.1, 4.05), 24), light);
   door.name = "doorway";
   root.add(door);
-  return { root, light, top: new THREE.Vector3(0, 7.2, 0), door };
+  const rebuild = rebuildable(root, pieces, { radius: 4, ground: () => 0, lift: 1.5, seed: 11 });
+  rebuild(1);
+  return { root, light, top: new THREE.Vector3(0, 7.2, 0), door, rebuild };
 }
 
 // The great tower on the far hill: a rock outcrop, a plinth, and one immense arched opening.
@@ -318,37 +357,57 @@ export function makeTower() {
     p.setXYZ(i, x + n * (x / 17), y, z + n * (z / 17));
   }
   rg.computeVertexNormals();
-  root.add(new THREE.Mesh(rg, rock));
-  // terraces wrapping the rock
+  const rockMesh = new THREE.Mesh(rg, rock);
+  rockMesh.name = "rock";
+  root.add(rockMesh);
+
+  const pieces = [];
+  const add = (m) => { root.add(m); pieces.push(m); return m; };
   for (let k = 0; k < 3; k++) {
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(13 - k * 3.2, 13.5 - k * 3.2, 0.9, 28, 1, true), stone);
+    const t = add(new THREE.Mesh(new THREE.CylinderGeometry(13 - k * 3.2, 13.5 - k * 3.2, 0.9, 28, 1, true), stone));
     t.position.y = 4 + k * 3.4;
-    root.add(t);
   }
-  const W = 7, H = 30, base = 14;
-  root.add(box(11, 2.2, 11, stone, 0, base + 1.1, 0), box(12, 0.5, 12, stone, 0, base + 2.4, 0));
-  // walls around a tall opening, front and back
-  const wall = new THREE.Shape();
-  wall.moveTo(-W / 2, 0); wall.lineTo(-W / 2, H); wall.lineTo(W / 2, H); wall.lineTo(W / 2, 0); wall.closePath();
-  wall.holes.push(archShape(3.2, 22, 0, 0));
-  const wg = new THREE.ExtrudeGeometry(wall, { depth: W, bevelEnabled: false, curveSegments: 24 });
-  wg.translate(0, base + 2.6, -W / 2);
-  root.add(new THREE.Mesh(wg, stone));
-  // pilasters, cornice and a crown of small arches
-  [-W / 2, W / 2].forEach((x) => root.add(box(0.7, H, W + 0.4, stone, x, base + 2.6 + H / 2, 0)));
-  root.add(box(W + 1.4, 0.8, W + 1.4, stone, 0, base + 2.6 + H, 0), box(W + 0.6, 2.6, W + 0.6, stone, 0, base + 2.6 + H + 1.7, 0));
+  const W = 7, H = 30, base = 14, y0 = base + 2.6, OPEN = 3.2, OPEN_H = 22;
+  add(box(11, 2.2, 11, stone, 0, base + 1.1, 0));
+  add(box(12, 0.5, 12, stone, 0, base + 2.4, 0));
+  // walls either side of the opening, laid in courses
+  const side = (W - OPEN) / 2, course = OPEN_H / 8;
+  for (let j = 0; j < 8; j++) {
+    [-1, 1].forEach((s) => add(box(side, course, W, stone, s * (OPEN / 2 + side / 2), y0 + course * (j + 0.5), 0)));
+  }
+  // the arch over the opening, then solid courses to the cornice
+  const cap = new THREE.Shape();
+  cap.moveTo(-OPEN / 2, 0); cap.lineTo(-OPEN / 2, 1.6); cap.lineTo(OPEN / 2, 1.6); cap.lineTo(OPEN / 2, 0);
+  cap.absarc(0, 0, OPEN / 2, 0, Math.PI, false);
+  const cg = new THREE.ExtrudeGeometry(cap, { depth: W, bevelEnabled: false, curveSegments: 24 });
+  cg.translate(0, -1.6, -W / 2);
+  add(new THREE.Mesh(cg, stone)).position.y = y0 + OPEN_H - 1.6 + 1.6;
+  const upper = (H - OPEN_H) / 3;
+  for (let j = 0; j < 3; j++) add(box(W, upper, W, stone, 0, y0 + OPEN_H + upper * (j + 0.5), 0));
+  // pilasters in segments, cornice, and a crown with its row of small arches
+  [-W / 2, W / 2].forEach((x) => { for (let j = 0; j < 5; j++) add(box(0.7, H / 5, W + 0.4, stone, x, y0 + (H / 5) * (j + 0.5), 0)); });
+  add(box(W + 1.4, 0.8, W + 1.4, stone, 0, y0 + H, 0));
+  const crown = add(box(W + 0.6, 2.6, W + 0.6, stone, 0, y0 + H + 1.7, 0));
   const ink = new THREE.MeshBasicMaterial({ color: "#10173a", fog: false });
   for (let i = 0; i < 5; i++) {
     const w = new THREE.Mesh(new THREE.ShapeGeometry(archShape(0.75, 1.7), 12), ink);
-    w.position.set(-2.8 + i * 1.4, base + 2.6 + H + 0.75, W / 2 + 0.31);
-    root.add(w);
+    w.position.set(-2.8 + i * 1.4, -0.95, W / 2 + 0.31);
+    crown.add(w);
   }
   const light = doorLightMaterial();
-  const door = new THREE.Mesh(new THREE.ShapeGeometry(archShape(3.2, 22), 24), light);
-  door.position.set(0, base + 2.6, 0);
+  const door = new THREE.Mesh(new THREE.ShapeGeometry(archShape(OPEN, OPEN_H), 24), light);
+  door.position.set(0, y0, 0);
   door.name = "doorway";
   root.add(door);
-  return { root, light, top: new THREE.Vector3(0, base + 2.6 + H + 4, 0), door };
+  // rubble falls across the plateau and down the rock
+  const ground = (x, z) => { const r = Math.hypot(x, z); return r < 5.5 ? 14 : Math.max(0, Math.min(14, (17 - r) / 0.95)); };
+  const extra = [];
+  return {
+    root, light, door, top: new THREE.Vector3(0, y0 + H + 4, 0),
+    // the dog is placed with the crown: call this before the first rebuild()
+    addPiece(m) { root.add(m); pieces.push(m); extra.push(m); },
+    rebuild: (() => { let fn = null; return (t) => { if (!fn) fn = rebuildable(root, pieces, { radius: 9, ground, lift: 5, seed: 23 }); fn(t); }; })(),
+  };
 }
 
 // ---------- small things hidden in the world ----------

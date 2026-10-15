@@ -26,5 +26,5 @@ Tracks without a `src` play a synthesized placeholder.
 ## New direction: New Dawn
 
 `new-dawn/` replaces the black-and-chrome concepts above: a screen-printed meadow
-that heals from a storm as the two songs play, with a printed player strip.
+that starts on fire and is rebuilt by the two songs, with a printed player strip.
 See `new-dawn/README.md`.
