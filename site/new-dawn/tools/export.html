@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>New Dawn model export</title>
+<!-- Builds each model from assets.js and hands back binary glTF (.glb).
+     Run tools/export-models.js (Playwright) to write them into ../models/. -->
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from "three";
+import { GLTFExporter } from "./vendor/GLTFExporter.js";
+import { makeGate, makeTower, makeCloud, leafGeometry, wildflowerGeometry, makeParcel, makeDog } from "../assets.js";
+
+// glTF has no slot for the toon shader, so bake each toon surface to its lit ink colour.
+function bake(root) {
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const m = o.material;
+    if (m.isShaderMaterial && m.uniforms.uLit) o.material = new THREE.MeshStandardMaterial({ color: m.uniforms.uLit.value, roughness: 0.9 });
+  });
+  return root;
+}
+const models = {
+  "gate": () => makeGate().root,
+  "tower": () => makeTower().root,
+  "cloud": () => makeCloud(4),
+  "parcel": () => makeParcel(),
+  "dog": () => makeDog().root,
+  "leaf": () => new THREE.Mesh(leafGeometry(), new THREE.MeshStandardMaterial({ color: "#3d9a26", side: THREE.DoubleSide })),
+  "poppy": () => new THREE.Mesh(wildflowerGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide })),
+};
+window.exportModel = async (name) => {
+  const obj = bake(models[name]());
+  obj.name = name;
+  const buf = await new GLTFExporter().parseAsync(obj, { binary: true });
+  return Array.from(new Uint8Array(buf));
+};
+window.exportNames = Object.keys(models);
+</script>

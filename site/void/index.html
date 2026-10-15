@@ -1,0 +1,75 @@
+<title>Void</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: nothing but the dark. One canvas fills it; a single point of light is the way in. */
+:root {
+  --void: #000;
+  --chrome: #e9ebef;
+  --dim: #5a5e66;
+  color-scheme: dark;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--void);
+  color: var(--chrome);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+/* the way in: a point of chrome light that breathes slowly while the music loads, then quickens */
+#gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  border: 0;
+  padding: 0;
+  background: var(--void);
+  display: grid;
+  place-items: center;
+  cursor: default;
+  transition: opacity 2s ease;
+}
+#gate span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, #9aa0aa 45%, #2a2c30 80%);
+  box-shadow: 0 0 18px rgba(230, 235, 245, 0.35);
+  animation: breathe 5s ease-in-out infinite;
+  opacity: 0.4;
+}
+#gate.ready { cursor: pointer; }
+#gate.ready span { animation-duration: 2.8s; opacity: 1; }
+#gate:focus-visible span { outline: 1px solid var(--dim); outline-offset: 10px; }
+#gate.gone { opacity: 0; pointer-events: none; }
+@keyframes breathe {
+  0%, 100% { transform: scale(0.7); }
+  50% { transform: scale(1.3); }
+}
+
+/* the volume readout: two digits that surface for a moment when you scroll */
+#vol {
+  position: fixed;
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  font: 300 11px/1 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.4em;
+  color: var(--dim);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+#vol.on { opacity: 0.8; }
+
+@media (prefers-reduced-motion: reduce) { #gate span { animation: none; } }
+</style>
+
+<canvas id="c" aria-label="A chrome wheel. Turn it to choose a song. Tap the centre to pause, drag the inner line to move through the song, scroll for volume." role="img"></canvas>
+<button id="gate" aria-label="Loading"><span></span></button>
+<div id="vol" aria-live="polite"></div>
+<script src="void.js"></script>

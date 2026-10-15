@@ -1,0 +1,185 @@
+<title>New Dawn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap">
+<style>
+/* Layout: a full-bleed city street as backdrop; one printed player strip at the foot is the only interface. */
+:root {
+  --ultramarine: #2c5fb8;
+  --paper: #f4ead2;
+  --ink: #0a1033;
+  --ember: #ff7a1a;
+  --engraved: "IM Fell English SC", "Cormorant SC", Georgia, "Times New Roman", serif;
+  color-scheme: dark;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ultramarine);
+  color: var(--paper);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+/* The player: one printed strip at the foot of the page, in the same paper, ink and sun as the world. */
+#player {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 3;
+  width: min(620px, calc(100vw - 32px));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font: 400 13px/1 var(--engraved);
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.places { display: flex; gap: 6px; }
+.place, #pp {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+.place svg { width: 22px; height: 22px; }
+.place[aria-pressed="true"] { background: var(--ink); color: #ffe6a3; }
+.playing .place[aria-pressed="true"] svg .door { fill: var(--ember); }
+#pp { border-radius: 50%; background: var(--ember); }
+#pp svg { width: 14px; height: 14px; }
+#pp .pause { display: none; }
+.playing #pp .pause { display: block; }
+.playing #pp .play { display: none; }
+.place:hover, #pp:hover { background: rgba(10, 16, 51, 0.1); }
+.place[aria-pressed="true"]:hover { background: var(--ink); }
+#pp:hover { background: #ff8f3a; }
+.place:focus-visible, #pp:focus-visible { outline: 2px solid var(--ultramarine); outline-offset: 2px; }
+
+.seek { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; min-width: 0; }
+
+/* The scrubber is a horizon: ink line, and the sun is the handle. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(90deg, var(--ember) 0 calc(var(--fill, 0) * 100%), var(--ink) 0);
+}
+input[type="range"]::-moz-range-track { height: 2px; background: var(--ink); }
+input[type="range"]::-moz-range-progress { height: 2px; background: var(--ember); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: radial-gradient(circle, #fff 0 30%, #ffd24a 38%, var(--ember) 62%, #c8300a 100%);
+  box-shadow: 0 0 calc(4px + var(--beat, 0) * 18px) rgba(255, 140, 40, 0.8);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: radial-gradient(circle, #fff 0 30%, #ffd24a 38%, var(--ember) 62%, #c8300a 100%);
+}
+#seek { --fill: var(--p, 0); }
+input[type="range"]:focus-visible { outline: 2px solid var(--ultramarine); outline-offset: 4px; }
+
+.vol { display: flex; align-items: center; gap: 6px; width: 110px; }
+.vol svg { flex: none; width: 16px; height: 16px; }
+#vol { --fill: var(--vol, 0.8); }
+
+@media (max-width: 520px) {
+  #player { grid-template-columns: auto auto 1fr; row-gap: 8px; padding: 10px 12px; }
+  .seek { grid-column: 1 / -1; grid-row: 2; }
+  .vol { width: auto; justify-self: end; }
+}
+
+#gate {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 20px;
+  background: radial-gradient(110% 80% at 50% 100%, rgba(40, 30, 60, 0.1), rgba(8, 10, 30, 0.55));
+  cursor: pointer;
+  transition: opacity 1.6s ease;
+  font: 400 clamp(18px, 2.6vw, 24px)/1 var(--engraved);
+  letter-spacing: 0.3em;
+  color: var(--paper);
+  text-shadow: 0 1px 0 var(--ink), 0 0 14px rgba(10, 16, 51, 0.7);
+}
+#gate img {
+  width: clamp(84px, 14vw, 120px);
+  height: auto;
+  filter: drop-shadow(0 0 28px rgba(255, 130, 40, 0.6));
+  animation: breathe 3.4s ease-in-out infinite;
+}
+#gate:focus-visible img { outline: 1px solid var(--paper); outline-offset: 10px; border-radius: 50%; }
+#gate.gone { opacity: 0; pointer-events: none; }
+#gate.loading { cursor: progress; }
+#gate.loading img { animation-duration: 1.2s; opacity: 0.6; }
+@keyframes breathe { 0%, 100% { transform: scale(0.94); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #gate img { animation: none; } }
+</style>
+
+<canvas id="world"></canvas>
+<div id="player" role="group" aria-label="Music">
+  <div class="places">
+    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the front door">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V9a6 6 0 0 1 12 0v11z" fill="currentColor"/><path class="door" d="M8.5 20V9.6a3.5 3.5 0 0 1 7 0V20z" fill="#f4ead2"/><path d="M3 23h18v-1.5H3zM4.5 21.5h15V20h-15z" fill="currentColor"/></svg>
+    </button>
+    <button class="place" type="button" aria-pressed="false" aria-label="Play the song at the bridge">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 22V3h2.5v19zM14.5 22V3H17v19zM7 8h10v1.6H7zM9.5 14h5a2.5 2.5 0 0 0-5 0z" fill="currentColor"/><path class="door" d="M9.5 22v-8a2.5 2.5 0 0 1 5 0v8z" fill="#f4ead2"/><path d="M1 15h22v2H1zM1 15C4 7 6 5 8 3.5M23 15C20 7 18 5 16 3.5" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M1 15h22v2H1z" fill="currentColor"/></svg>
+    </button>
+  </div>
+  <button id="pp" type="button" aria-label="Play">
+    <svg class="play" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5l9 5.5-9 5.5z" fill="#0a1033"/></svg>
+    <svg class="pause" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5h3v11H3zM8 1.5h3v11H8z" fill="#0a1033"/></svg>
+  </button>
+  <div class="seek">
+    <span id="t-now">0:00</span>
+    <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Position in the song">
+    <span id="t-end">0:00</span>
+  </div>
+  <label class="vol">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 5.5a3.5 3.5 0 0 1 0 5M12.5 3.5a6 6 0 0 1 0 9" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>
+    <input id="vol" type="range" min="0" max="100" value="80" aria-label="Volume">
+  </label>
+</div>
+<button id="gate" aria-label="Wake up and start the music"><img alt=""><span>wake up</span></button>
+
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="module" src="main.js"></script>
