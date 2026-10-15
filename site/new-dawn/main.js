@@ -2,7 +2,7 @@ import * as THREE from "three";
 import {
   RAINBOW, wildflowerGeometry, bladeGeometry, leafGeometry,
   glowTexture, makeCloud, makeRainbow, mulberry,
-  toonMaterial, printSunTextures, makeGate, makeTower, makeParcel, makeDog, pawGeometry,
+  toonMaterial, printSunTextures, makeGate, makeTower, makeParcel, makeDog,
 } from "./assets.js";
 
 // The world starts burning, both buildings in rubble. The first song rebuilds the gate, puts the
@@ -70,7 +70,7 @@ const post = new THREE.Mesh(
         c *= 1.0 - hatch * smoothstep(0.2, 0.06, l) * 0.35;
         c = mix(c, vec3(0.03, 0.05, 0.17), ink * 0.85);
         // a kick lifts the whole print a touch toward warm light
-        c = mix(c, c * 1.1 + vec3(0.05, 0.03, 0.0), uKick * 0.6);
+        c = mix(c, c * 1.1 + vec3(0.05, 0.03, 0.0), uKick * 0.15);
         gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
       }`,
   })
@@ -274,7 +274,11 @@ const BUSH = { lit: [new THREE.Color("#3a2e2a"), new THREE.Color("#3f8f2a")], mi
   const n = 4 + (i % 3);
   for (let k = 0; k < n; k++) {
     const r = 0.9 + rnd() * 0.9;
-    const x = bx + (k - n / 2) * 0.9 + rnd() * 0.5, z = bz + (rnd() - 0.5) * 1.2;
+    let x = bx + (k - n / 2) * 0.9 + rnd() * 0.5;
+    const z = bz + (rnd() - 0.5) * 1.2;
+    // keep every bush well clear of the path, pushing it out to whichever side it started on
+    const side = Math.sign(x - pathX(z)) || 1, clear = PATH_W + r + 1.4;
+    if (Math.abs(x - pathX(z)) < clear) x = pathX(z) + side * clear;
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 2), bushMat);
     m.position.set(x, height(x, z) + r * 0.6, z);
     m.scale.y = 0.75;
@@ -292,7 +296,7 @@ const windGLSL = `
   uniform float uTime, uBass; uniform vec2 uWind; uniform vec3 uGust;
   vec3 sway(vec3 world, vec3 root, float h, float r){
     float w = sin(uTime*1.6 + root.x*0.35 + root.z*0.25)*0.55 + sin(uTime*3.3 + root.x*1.3 + r*6.2831)*0.2;
-    vec2 bend = uWind * (0.55 + w) * (0.32 + uBass*0.55);
+    vec2 bend = uWind * (0.55 + w) * (0.32 + uBass*0.15);
     vec2 d = root.xz - uGust.xy;
     float g = uGust.z * exp(-dot(d,d)*0.22);
     bend += normalize(d + 1e-4) * g * 1.3;
@@ -464,24 +468,6 @@ dog.root.position.set(-3.6, 16.65, 4.4);
 dog.root.scale.setScalar(1.25);
 landmarks[1].addPiece(dog.root);
 const eyeDark = new THREE.Color("#10173a"), eyeLit = new THREE.Color("#ff7a1a");
-// Its paw prints are pressed into the path, one by one, while its song plays.
-const PAWS = 70;
-const pawMesh = new THREE.InstancedMesh(pawGeometry(), new THREE.MeshBasicMaterial({ color: "#3a2f22", transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }), PAWS);
-{
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion();
-  for (let i = 0; i < PAWS; i++) {
-    const z = 7 - i * 0.42;
-    const x = pathX(z) + (i % 2 ? 0.16 : -0.16) + Math.sin(i * 1.7) * 0.05;
-    const dir = Math.atan2(-(pathX(z - 0.1) - pathX(z)) / 0.1, 1);
-    q.setFromEuler(new THREE.Euler(0, dir, 0));
-    m.compose(new THREE.Vector3(x, height(x, z) + 0.07, z), q, new THREE.Vector3(1, 1, 1));
-    pawMesh.setMatrixAt(i, m);
-  }
-}
-pawMesh.count = 0;
-pawMesh.frustumCulled = false;
-scene.add(pawMesh);
-let pawsShown = 0;
 // stone sits in grey-blue shadow under the storm and warms as the light returns
 const stoneMats = [];
 landmarks.forEach((lm, li) => lm.root.traverse((o) => {
@@ -534,7 +520,7 @@ const flameMat = new THREE.ShaderMaterial({
       float alive = aInfo.w < 0.5 ? 1.0 - heal(aPos.xz, aInfo.y) : (aInfo.w < 1.5 ? uGateFire : uTowerFire);
       float e = uBands[int(aInfo.z)];
       // each flame leaps with its slice of the spectrum
-      float h = aInfo.x * alive * (0.75 + e * 1.1 + 0.12 * sin(uTime * 7.0 + aInfo.y * 20.0));
+      float h = aInfo.x * alive * (0.9 + e * 0.3 + 0.12 * sin(uTime * 7.0 + aInfo.y * 20.0));
       vec4 mv = viewMatrix * vec4(aPos, 1.0);
       mv.xy += vec2(position.x * h * 0.62, (position.y + 0.5) * h);
       vUv = uv; vSeed = aInfo.y;
@@ -848,9 +834,9 @@ function frame() {
   sunSpin *= Math.pow(0.97, dt * 60);
   sunAngle += dt * (0.03 + sunSpin);
   sun.rays.rotation.z = sunAngle;
-  sun.rays.scale.setScalar(1 + bass * 0.35 + kick * 0.1);
-  sun.rays.material.opacity = THREE.MathUtils.smoothstep(Bs, 0.2, 0.7) * (0.75 + bass * 0.5);
-  const pulse = 1 + bass * 0.12;
+  sun.rays.scale.setScalar(1 + bass * 0.08);
+  sun.rays.material.opacity = THREE.MathUtils.smoothstep(Bs, 0.2, 0.7) * (0.85 + bass * 0.15);
+  const pulse = 1 + bass * 0.03;
   sun.root.scale.setScalar(pulse);
   skyU.uSun.value.copy(sun.root.position).sub(camera.position).normalize();
   // the rainbow only comes once the tower stands again
@@ -859,7 +845,7 @@ function frame() {
   sun.disc.material.opacity = THREE.MathUtils.smoothstep(Bs, 0.05, 0.35);
   hemi.intensity = 0.55 + rise * 0.8;
   hemi.color.set("#c0603a").lerp(new THREE.Color("#bfe6ff"), rise);
-  fireLight.intensity = 30 * fire * (0.8 + bass * 0.6 + Math.sin(t * 13) * 0.1);
+  fireLight.intensity = 30 * fire * (0.9 + bass * 0.15 + Math.sin(t * 13) * 0.1);
   fireLight.position.set(pathX(walkZ - 8), 2.5, walkZ - 8);
   sunLight.intensity = 0.4 + rise * 2.0;
   ground.material.color.set("#3a2a24").lerp(new THREE.Color("#ffffff"), THREE.MathUtils.smoothstep(As, 0.05, 0.85));
@@ -886,16 +872,14 @@ function frame() {
     lm.glow += (on - lm.glow) * k(0.03);
     let idle = 0;
     if (i === 0) idle = morseOn[Math.floor(t / 0.2) % morseOn.length] * 0.35 * (1 - lm.glow);
-    lm.light.color.copy(doorDark).lerp(doorLit, Math.min(1, lm.glow * (0.75 + bass * 0.4) + idle));
+    lm.light.color.copy(doorDark).lerp(doorLit, Math.min(1, lm.glow * (0.85 + bass * 0.12) + idle));
     const built = i ? Bs : As;
-    lm.halo.material.opacity = (lm.glow * (0.55 + bass * 0.6) + lm.glow * 0.25) * THREE.MathUtils.smoothstep(built, 0.85, 1.0);
+    lm.halo.material.opacity = (lm.glow * (0.7 + bass * 0.15) + lm.glow * 0.2) * THREE.MathUtils.smoothstep(built, 0.85, 1.0);
   });
   const v = current >= 0 ? voices[current] : null;
   const progress = v && v.el.duration ? v.el.currentTime / v.el.duration : 0;
   player.tick(progress, bass);
-  dog.eyes.color.copy(eyeDark).lerp(eyeLit, landmarks[1].glow * (0.6 + bass * 0.8));
-  pawsShown = Math.floor(Math.min(1, Bs * 1.15) * PAWS);
-  pawMesh.count = pawsShown;
+  dog.eyes.color.copy(eyeDark).lerp(eyeLit, landmarks[1].glow * (0.8 + bass * 0.2));
 
   // the cloud streaks are the spectrum
   for (let b = 0; b < 12; b++) {
@@ -906,17 +890,17 @@ function frame() {
   puffMat.uniforms.uBass.value = bass;
   kick *= Math.pow(0.9, dt * 60);
   post.material.uniforms.uKick.value = kick;
-  pondFull.set("#1d39c4").lerp(pondLit, Math.min(1, high * 2.5));
+  pondFull.set("#1d39c4").lerp(pondLit, Math.min(1, high * 0.8));
 
-  // the music moves the wind: each kick sends a gust and a scatter of petals across the meadow
+  // the music moves the wind a little: each kick sends a soft gust and a stray petal
   if (playing && bass > 0.5 && bass > bassAvg * 1.22 && t - lastBurst > 0.4) {
     lastBurst = t;
     kick = 1;
     const ahead = camera.position.z - 3 - rnd() * 6;
     const gx = pathX(ahead) + (rnd() - 0.5) * 8;
     gustTarget.set(gx, ahead, 0);
-    pointerSpeed = Math.max(pointerSpeed, 0.9);
-    burst(new THREE.Vector3(gx, 0.4, ahead), fire > 0.3 ? ["#ff7a1a", "#ffb400", "#ffd24a", "#2a2224"] : B > 0.3 ? POPPY : leafGreens, 5);
+    pointerSpeed = Math.max(pointerSpeed, 0.35);
+    burst(new THREE.Vector3(gx, 0.4, ahead), fire > 0.3 ? ["#ff7a1a", "#ffb400", "#ffd24a", "#2a2224"] : B > 0.3 ? POPPY : leafGreens, 1);
   }
 
   // leaves
@@ -960,7 +944,7 @@ function frame() {
     if (pollenPos[i * 3] > 12) pollenPos[i * 3] = -12;
   }
   pollenGeo.attributes.position.needsUpdate = true;
-  pollen.material.size = 0.12 + high * 0.25;
+  pollen.material.size = 0.12 + high * 0.06;
   // embers while it burns, pollen once it has healed
   pollen.material.opacity = Math.max(fire, THREE.MathUtils.smoothstep(Bs, 0.3, 0.8));
   pollen.material.color.set("#fff4c8").lerp(emberC, fire);

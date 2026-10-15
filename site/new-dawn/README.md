@@ -30,22 +30,19 @@ appear anywhere.
 - While a song plays you walk the path toward its place. By the end of
   `doordash` you have walked through the gate.
 
-## The music drives the page
+## The music breathes through it
 
-- While it burns, the flames are the visualizer: each one leaps with its slice
-  of the spectrum, low frequencies on the left, highs on the right.
-- Once the sky clears, the twelve cloud streaks fanning out of the sun take over
-  as the spectrum. Each swells and warms as its band gets loud.
-- The sun's rays pulse with the bass. Kicks flash the whole print warmer and send
-  a gust and petals through the meadow. The ponds shimmer with the highs.
-- Pointer movement pushes wind through the grass and leaves.
+The rebuild tells the story; the music only moves the world gently. The flames,
+and later the cloud streaks fanning out of the sun, sway a little with their
+slice of the spectrum. The sun's rays and the lit doorway breathe with the bass,
+and kicks send a soft gust through the meadow. Moving the pointer pushes wind
+through the grass and leaves.
 
 ## Hidden in the world
 
 - A delivery bag sits on the gate's doorstep.
 - When its song is quiet, the gate's doorway blinks D O O R in Morse code.
 - A stone war dog guards the foot of the tower. Its eyes kindle while its song plays.
-- Paw prints press into the path, one by one, as `wardoggin` plays.
 - The delivery only arrives once the gate is standing again.
 - Tap the sun.
 
@@ -70,7 +67,7 @@ The engraved typeface comes from Google Fonts and falls back to Georgia.
 | --- | --- |
 | `index.html` | Page shell, player strip and entry styles |
 | `main.js` | The world: fire, smoke, sky, meadow, rebuild, wind, audio, player strip, visualizer, print pass |
-| `assets.js` | Every 3D model, built in code: gate and tower (as rebuildable stone pieces), dog, parcel, paw prints, clouds, sun, grass, poppies, leaves, rainbow |
+| `assets.js` | Every 3D model, built in code: gate and tower (as rebuildable stone pieces), dog, parcel, clouds, sun, grass, poppies, leaves, rainbow |
 | `music/` | `doordash.mp3`, `wardoggin.mp3` |
 | `models/` | The models exported as `.glb` for use in Blender or elsewhere |
 | `imagery/` | Poster stills (on fire, gate rebuilt, restored) at 1920x1080 and 1080x1920, plus a 1200x630 share card |

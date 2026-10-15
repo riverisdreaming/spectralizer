@@ -192,7 +192,7 @@ export function toonMaterial({ lit = "#ffffff", mid = "#bcd0ff", shadow = "#2c4b
           float e = aBand < 0.0 ? uBass * 0.35 : uBands[int(aBand)];
           // energy reaches further out along the streak the louder the band is
           float reach = aBand < 0.0 ? 1.0 : smoothstep(e * 1.25 + 0.05, e * 1.25 - 0.25, aAlong);
-          grow = 1.0 + e * reach * 0.5;
+          grow = 1.0 + e * reach * 0.15;
           vGlow = e * reach;
         #endif
         mat4 m = modelMatrix;
@@ -213,7 +213,7 @@ export function toonMaterial({ lit = "#ffffff", mid = "#bcd0ff", shadow = "#2c4b
         d += (sin(vW.x*1.7 + vW.y*2.3) * sin(vW.y*1.9 - vW.z*1.3)) * 0.07 * uBumps;
         vec3 c = mix(uShadow, uMid, smoothstep(0.40, 0.44, d));
         c = mix(c, uLit, smoothstep(0.60, 0.64, d));
-        c = mix(c, vec3(1.0, 0.78, 0.45), clamp(vGlow, 0.0, 1.0) * 0.4 * smoothstep(0.4, 0.62, d));
+        c = mix(c, vec3(1.0, 0.78, 0.45), clamp(vGlow, 0.0, 1.0) * 0.15 * smoothstep(0.4, 0.62, d));
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -454,20 +454,4 @@ export function makeDog() {
   [-0.15, 0.15].forEach((x) => part(new THREE.BoxGeometry(0.1, 0.08, 0.04), x, 1.86, 0.87, 0, 0, 0, eyes));  // eyes
   part(new THREE.BoxGeometry(0.12, 0.12, 0.7), 0, 0.2, -0.85, 0.5);          // tail
   return { root: g, eyes };
-}
-
-// One paw print, flat on the ground: a pad and four toes.
-export function pawGeometry() {
-  const parts = [];
-  const pad = new THREE.CircleGeometry(0.075, 14);
-  pad.scale(1.1, 0.9, 1);
-  parts.push(pad);
-  [[-0.08, 0.08], [-0.03, 0.12], [0.03, 0.12], [0.08, 0.08]].forEach(([x, y]) => {
-    const t = new THREE.CircleGeometry(0.03, 10);
-    t.translate(x, y, 0);
-    parts.push(t);
-  });
-  const g = mergeGeometries(parts);
-  g.rotateX(-Math.PI / 2);
-  return g;
 }
