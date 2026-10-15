@@ -345,62 +345,85 @@ rain.frustumCulled = false;
 scene.add(rain);
 
 // ---------- audio ----------
-let actx, analyser, freq, volume, volLevel = 0.8, current = -1, playing = false;
+// The songs are fetched as data, decoded here and played as Web Audio buffers. No <audio>
+// element is involved, so nothing depends on how the host serves or allows media files, and the
+// tap on "wake up" only has to resume the context to make sound.
+let analyser, freq, volume, volLevel = 0.8, current = -1, playing = false, wanted = -1;
+const actx = new (window.AudioContext || window.webkitAudioContext)();
+analyser = actx.createAnalyser();
+analyser.fftSize = 1024;
+analyser.smoothingTimeConstant = 0.8;
+// volume sits after the analyser, so the city reacts the same at any volume
+volume = actx.createGain();
+volume.gain.value = volLevel;
+analyser.connect(volume).connect(actx.destination);
+freq = new Uint8Array(analyser.frequencyBinCount);
 const voices = [];
-// Fetch both songs as soon as the page opens. Playing them from blob: URLs keeps them on the
-// page's own origin, so Web Audio may read them (a cross-origin file plays silent through it),
-// and it means the tap on "wake up" can start the sound at once, inside the gesture phones need.
-const songURLs = TRACKS.map(() => null);
-const songsReady = Promise.all(TRACKS.map((t, i) =>
-  fetch(t.src)
-    .then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
-    .then((b) => (songURLs[i] = URL.createObjectURL(b)))
-    .catch(() => (songURLs[i] = t.src)) // fall back to plain playback without the visual link
-));
+
+// A small player over an AudioBuffer with the parts of the <audio> API the page uses.
+function bufferPlayer(buffer, out) {
+  let src = null, startAt = 0, offset = 0, on = false;
+  const ended = [];
+  const start = () => {
+    const s = (src = actx.createBufferSource());
+    s.buffer = buffer;
+    s.connect(out);
+    s.onended = () => {
+      if (s !== src || !on) return; // stopped on purpose, not finished
+      on = false; src = null; offset = buffer.duration;
+      ended.forEach((f) => f());
+    };
+    startAt = actx.currentTime - offset;
+    s.start(0, offset);
+    on = true;
+  };
+  const stop = () => { const s = src; src = null; on = false; if (s) try { s.stop(); } catch (e) {} };
+  const el = {
+    get duration() { return buffer.duration; },
+    get paused() { return !on; },
+    get ended() { return !on && offset >= buffer.duration - 0.05; },
+    get currentTime() { return on ? Math.min(buffer.duration, actx.currentTime - startAt) : offset; },
+    set currentTime(t) { const was = on; if (was) stop(); offset = Math.max(0, Math.min(t, buffer.duration - 0.01)); if (was) start(); },
+    play() { if (!on) start(); return Promise.resolve(); },
+    pause() { if (on) { offset = el.currentTime; stop(); } },
+    addEventListener(type, fn) { if (type === "ended") ended.push(fn); },
+  };
+  return el;
+}
+
+function loadSong(i) {
+  return fetch(TRACKS[i].src)
+    .then((r) => { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); })
+    .then((data) => new Promise((res, rej) => actx.decodeAudioData(data, res, rej)))
+    .then((buffer) => {
+      const g = actx.createGain();
+      g.gain.value = 0;
+      g.connect(analyser);
+      const el = bufferPlayer(buffer, g);
+      el.addEventListener("ended", () => play((i + 1) % TRACKS.length));
+      voices[i] = { el, g };
+      if (wanted === i) { wanted = -1; play(i); }
+    });
+}
+// the first song gates the entry; the second loads right behind it
+const songsReady = loadSong(0);
+songsReady.then(() => loadSong(1)).catch((e) => console.error("Could not load the music:", e));
 
 function startAudio() {
-  actx = new (window.AudioContext || window.webkitAudioContext)();
   actx.resume();
-  analyser = actx.createAnalyser();
-  analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.8;
-  // volume sits after the analyser, so the drawings react the same at any volume
-  volume = actx.createGain();
-  volume.gain.value = volLevel;
-  analyser.connect(volume).connect(actx.destination);
-  freq = new Uint8Array(analyser.frequencyBinCount);
-  TRACKS.forEach((t, i) => {
-    const url = songURLs[i] || t.src;
-    const el = new Audio(url);
-    el.preload = "auto";
-    el.addEventListener("ended", () => play((i + 1) % TRACKS.length));
-    // only same-origin (blob:) audio goes through Web Audio; anything else plays straight out
-    const direct = !url.startsWith("blob:");
-    let g = null;
-    if (!direct) {
-      g = actx.createGain();
-      g.gain.value = 0;
-      actx.createMediaElementSource(el).connect(g).connect(analyser);
-    } else {
-      el.volume = 0;
-    }
-    voices.push({ el, g, direct });
-  });
 }
-// fade a voice in or out, whichever way it is wired
 function fade(v, to, time) {
-  if (v.direct) { v.el.volume = to * volLevel; return; }
   v.g.gain.setTargetAtTime(to, actx.currentTime, time);
 }
 function play(i) {
-  if (!actx) return;
   actx.resume();
+  if (!voices[i]) { wanted = i; return; } // still loading: it starts the moment it is ready
   if (i === current) {
     const v = voices[i];
-    if (playing) { fade(v, 0, 0.15); setTimeout(() => v.el.pause(), 500); playing = false; }
+    if (playing) { fade(v, 0, 0.15); setTimeout(() => { if (!playing || current !== i) v.el.pause(); }, 500); playing = false; }
     else { v.el.play(); fade(v, 1, 0.2); playing = true; }
   } else {
-    if (current >= 0) { const old = voices[current]; fade(old, 0, 0.35); setTimeout(() => old.el.pause(), 1600); }
+    if (current >= 0 && voices[current]) { const old = voices[current]; fade(old, 0, 0.35); setTimeout(() => { if (current !== voices.indexOf(old)) old.el.pause(); }, 1600); }
     const v = voices[i];
     if (v.el.ended) v.el.currentTime = 0;
     v.el.play();
@@ -442,7 +465,6 @@ const player = (() => {
   vol.addEventListener("input", () => {
     volLevel = vol.value / 100;
     if (volume) volume.gain.setTargetAtTime(volLevel, actx.currentTime, 0.03);
-    voices.forEach((v, k) => { if (v.direct && k === current && playing) v.el.volume = volLevel; });
     root.style.setProperty("--vol", volLevel);
     try { localStorage.setItem("new-dawn-volume", String(volLevel)); } catch (e) {}
   });
@@ -506,7 +528,9 @@ const gateLabel = gate.querySelector("span");
 gate.disabled = true;
 gate.classList.add("loading");
 gateLabel.textContent = "loading";
-songsReady.then(() => { gate.disabled = false; gate.classList.remove("loading"); gateLabel.textContent = "wake up"; });
+songsReady
+  .then(() => { gate.disabled = false; gate.classList.remove("loading"); gateLabel.textContent = "wake up"; })
+  .catch(() => { gateLabel.textContent = "the music could not load, reload the page"; });
 gate.addEventListener("click", () => {
   if (entered || gate.disabled) return;
   entered = true;
