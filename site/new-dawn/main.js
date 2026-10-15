@@ -347,8 +347,20 @@ scene.add(rain);
 // ---------- audio ----------
 let actx, analyser, freq, volume, volLevel = 0.8, current = -1, playing = false;
 const voices = [];
+// Fetch both songs as soon as the page opens. Playing them from blob: URLs keeps them on the
+// page's own origin, so Web Audio may read them (a cross-origin file plays silent through it),
+// and it means the tap on "wake up" can start the sound at once, inside the gesture phones need.
+const songURLs = TRACKS.map(() => null);
+const songsReady = Promise.all(TRACKS.map((t, i) =>
+  fetch(t.src)
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+    .then((b) => (songURLs[i] = URL.createObjectURL(b)))
+    .catch(() => (songURLs[i] = t.src)) // fall back to plain playback without the visual link
+));
+
 function startAudio() {
   actx = new (window.AudioContext || window.webkitAudioContext)();
+  actx.resume();
   analyser = actx.createAnalyser();
   analyser.fftSize = 1024;
   analyser.smoothingTimeConstant = 0.8;
@@ -358,29 +370,41 @@ function startAudio() {
   analyser.connect(volume).connect(actx.destination);
   freq = new Uint8Array(analyser.frequencyBinCount);
   TRACKS.forEach((t, i) => {
-    const el = new Audio(t.src);
+    const url = songURLs[i] || t.src;
+    const el = new Audio(url);
     el.preload = "auto";
-    const g = actx.createGain();
-    g.gain.value = 0;
-    actx.createMediaElementSource(el).connect(g).connect(analyser);
     el.addEventListener("ended", () => play((i + 1) % TRACKS.length));
-    voices.push({ el, g });
+    // only same-origin (blob:) audio goes through Web Audio; anything else plays straight out
+    const direct = !url.startsWith("blob:");
+    let g = null;
+    if (!direct) {
+      g = actx.createGain();
+      g.gain.value = 0;
+      actx.createMediaElementSource(el).connect(g).connect(analyser);
+    } else {
+      el.volume = 0;
+    }
+    voices.push({ el, g, direct });
   });
+}
+// fade a voice in or out, whichever way it is wired
+function fade(v, to, time) {
+  if (v.direct) { v.el.volume = to * volLevel; return; }
+  v.g.gain.setTargetAtTime(to, actx.currentTime, time);
 }
 function play(i) {
   if (!actx) return;
   actx.resume();
-  const now = actx.currentTime;
   if (i === current) {
     const v = voices[i];
-    if (playing) { v.g.gain.setTargetAtTime(0, now, 0.15); setTimeout(() => v.el.pause(), 500); playing = false; }
-    else { v.el.play(); v.g.gain.setTargetAtTime(1, now, 0.2); playing = true; }
+    if (playing) { fade(v, 0, 0.15); setTimeout(() => v.el.pause(), 500); playing = false; }
+    else { v.el.play(); fade(v, 1, 0.2); playing = true; }
   } else {
-    if (current >= 0) { const old = voices[current]; old.g.gain.setTargetAtTime(0, now, 0.35); setTimeout(() => old.el.pause(), 1600); }
+    if (current >= 0) { const old = voices[current]; fade(old, 0, 0.35); setTimeout(() => old.el.pause(), 1600); }
     const v = voices[i];
     if (v.el.ended) v.el.currentTime = 0;
     v.el.play();
-    v.g.gain.setTargetAtTime(1, now, 0.35);
+    fade(v, 1, 0.35);
     current = i; playing = true;
   }
   player.sync();
@@ -418,6 +442,7 @@ const player = (() => {
   vol.addEventListener("input", () => {
     volLevel = vol.value / 100;
     if (volume) volume.gain.setTargetAtTime(volLevel, actx.currentTime, 0.03);
+    voices.forEach((v, k) => { if (v.direct && k === current && playing) v.el.volume = volLevel; });
     root.style.setProperty("--vol", volLevel);
     try { localStorage.setItem("new-dawn-volume", String(volLevel)); } catch (e) {}
   });
@@ -476,13 +501,19 @@ addEventListener("keydown", (e) => {
 // ---------- entry ----------
 const gate = document.getElementById("gate");
 gate.querySelector("img").src = sunTex.disc.image.toDataURL();
+// The button waits until both songs are loaded, then starts the music right on the tap.
+const gateLabel = gate.querySelector("span");
+gate.disabled = true;
+gate.classList.add("loading");
+gateLabel.textContent = "loading";
+songsReady.then(() => { gate.disabled = false; gate.classList.remove("loading"); gateLabel.textContent = "wake up"; });
 gate.addEventListener("click", () => {
-  if (entered) return;
+  if (entered || gate.disabled) return;
   entered = true;
   startAudio();
+  play(0);
   gate.classList.add("gone");
-  setTimeout(() => play(0), 900);
-}, { once: true });
+});
 
 // ---------- loop ----------
 // A, B: how far each song has carried the city back (0..1). They only move forward.

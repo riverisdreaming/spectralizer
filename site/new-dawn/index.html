@@ -149,6 +149,8 @@ input[type="range"]:focus-visible { outline: 2px solid var(--ultramarine); outli
 }
 #gate:focus-visible img { outline: 1px solid var(--paper); outline-offset: 10px; border-radius: 50%; }
 #gate.gone { opacity: 0; pointer-events: none; }
+#gate.loading { cursor: progress; }
+#gate.loading img { animation-duration: 1.2s; opacity: 0.6; }
 @keyframes breathe { 0%, 100% { transform: scale(0.94); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #gate img { animation: none; } }
 </style>
