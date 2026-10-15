@@ -1,0 +1,75 @@
+<title>New Dawn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap">
+<style>
+/* Layout: a full-bleed printed landscape as backdrop; a compass dial at the bottom edge is the only control. */
+:root {
+  --ultramarine: #0b1f8f;
+  --paper: #f4ead2;
+  --ink: #0a1033;
+  --ember: #ff7a1a;
+  --engraved: "IM Fell English SC", "Cormorant SC", Georgia, "Times New Roman", serif;
+  color-scheme: dark;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ultramarine);
+  color: var(--paper);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#world { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+#compass {
+  position: fixed;
+  left: 50%;
+  bottom: calc(-4vmin + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 3;
+  touch-action: none;
+  cursor: grab;
+  transition: opacity 1.6s ease;
+  opacity: 0;
+}
+#compass:active { cursor: grabbing; }
+
+#gate {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  border: 0;
+  padding: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 20px;
+  background: radial-gradient(110% 80% at 50% 100%, rgba(40, 30, 60, 0.1), rgba(8, 10, 30, 0.55));
+  cursor: pointer;
+  transition: opacity 1.6s ease;
+  font: 400 clamp(18px, 2.6vw, 24px)/1 var(--engraved);
+  letter-spacing: 0.3em;
+  color: var(--paper);
+  text-shadow: 0 1px 0 var(--ink), 0 0 14px rgba(10, 16, 51, 0.7);
+}
+#gate img {
+  width: clamp(84px, 14vw, 120px);
+  height: auto;
+  filter: drop-shadow(0 0 28px rgba(255, 130, 40, 0.6));
+  animation: breathe 3.4s ease-in-out infinite;
+}
+#gate:focus-visible img { outline: 1px solid var(--paper); outline-offset: 10px; border-radius: 50%; }
+#gate.gone { opacity: 0; pointer-events: none; }
+@keyframes breathe { 0%, 100% { transform: scale(0.94); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #gate img { animation: none; } }
+</style>
+
+<canvas id="world"></canvas>
+<canvas id="compass" aria-label="Compass. Spin the needle toward a place to hear it; tap the centre to pause." role="img"></canvas>
+<button id="gate" aria-label="Wake up and start the music"><img alt=""><span>wake up</span></button>
+
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script type="module" src="main.js"></script>

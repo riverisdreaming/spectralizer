@@ -22,3 +22,9 @@ Edit `shared/audio.js` and give each track a `src`:
 ```
 
 Tracks without a `src` play a synthesized placeholder.
+
+## New direction: New Dawn
+
+`new-dawn/` replaces the black-and-chrome concepts above: a screen-printed meadow
+that heals from a storm as the two songs play, steered by a compass dial.
+See `new-dawn/README.md`.
